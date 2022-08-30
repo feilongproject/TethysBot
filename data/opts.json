@@ -1,0 +1,51 @@
+[
+    {
+        "reg": "^#(身份组列出|列出身份组)$",
+        "fnc": "identityList",
+        "describe": "列出身份组"
+    },
+    {
+        "reg": "^#(设置身份组|身份组设置)$",
+        "fnc": "identitySet",
+        "describe": "身份组设置"
+    },
+    {
+        "reg": "^#(设置信息|信息设置)$",
+        "fnc": "identityInfo",
+        "describe": "表情分配设置"
+    },
+
+    {
+        "reg": "^#(查询点数|点数查询)$",
+        "fnc": "scoreboardQuery",
+        "permission": "anyone",
+        "describe": "查询当前点数"
+    },
+    {
+        "reg": "^#点数排名$",
+        "fnc": "scoreboardRanking",
+        "permission": "anyone",
+        "describe": "列出点数排名"
+    },
+    {
+        "reg": "^#(添加|扣除)(\\d+)点数",
+        "fnc": "scoreboardChange",
+        "describe": "操作某人点数"
+    },
+    {
+        "reg": "^#答案(.+)点数(\\d+)人数(\\d+)$",
+        "fnc": "scoreboardSetAnswer",
+        "describe": "根据答案分配点数"
+    },
+    {
+        "reg": "^#(添加|扣除)(.+)身份组(\\d+)(点数)?$",
+        "fnc": "scoreboardChangeWithIdentity",
+        "describe": "操作某身份组点数"
+    },
+    {
+        "reg": ".*",
+        "fnc": "answer",
+        "permission": "anyone",
+        "describe": "根据答案获取点数"
+    }
+]
