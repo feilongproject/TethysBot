@@ -1,4 +1,4 @@
-import { IMessageEx } from "../system/IMessageEx";
+import { IMessageEx } from "../lib/IMessageEx";
 
 export async function identityList(msg: IMessageEx) {
     var rolesData = (await global.client.roleApi.roles(msg.guild_id)).data.roles;

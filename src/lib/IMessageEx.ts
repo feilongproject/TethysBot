@@ -2,10 +2,8 @@ import fs from "fs";
 import fetch from 'node-fetch';
 import FormData from 'form-data';
 import { Ark, Embed, IMember, IMessage, IUser, MessageAttachment, MessageToCreate } from "qq-guild-bot";
-import config from '../../../data/config.json';
+import config from '../../data/config.json';
 import log from './logger';
-
-
 
 
 export class IMessageEx {

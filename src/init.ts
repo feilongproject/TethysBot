@@ -1,10 +1,11 @@
 import { createOpenAPI, createWebsocket } from 'qq-guild-bot';
 import { createClient } from 'redis';
-import log from './plugins/system/logger';
+import log from './lib/logger';
 import config from '../data/config.json';
 
 export async function init() {
 
+    global._path = process.cwd();
 
     global.client = createOpenAPI(config.initConfig);
     global.ws = createWebsocket(config.initConfig as any);

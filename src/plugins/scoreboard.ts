@@ -1,8 +1,8 @@
 import fetch from "node-fetch";
 import { IMember } from "qq-guild-bot";
-import log from "../system/logger";
-import { IMessageEx } from "../system/IMessageEx";
-import config from '../../../data/config.json';
+import log from "../lib/logger";
+import { IMessageEx } from "../lib/IMessageEx";
+import config from '../../data/config.json';
 
 /**
  * 查询用户点数

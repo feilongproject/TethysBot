@@ -3,6 +3,7 @@ import { Ark, Embed, IMember, IMessage, IUser, MessageAttachment } from "qq-guil
 import { OpenAPI, WebsocketClient } from "./qq-guild-bot";
 
 declare global {
+    var _path: string;
     var client: OpenAPI;
     var ws: WebsocketClient;
     var redis: RedisClientType;

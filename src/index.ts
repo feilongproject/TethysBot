@@ -1,9 +1,9 @@
 import { init } from './init';
-import log from './plugins/system/logger';
-import { findOpts } from './plugins/system/findOpts';
-import { IMessageEx } from './plugins/system/IMessageEx';
-import { scoreboardAnswer, scoreboardChange, scoreboardChangeWithIdentity, scoreboardQuery, scoreboardRanking, scoreboardSetAnswer } from './plugins/components/scoreboard';
-import { identityInfo, identityList, identitySet } from './plugins/components/identity';
+import log from './lib/logger';
+import { findOpts } from './lib/findOpts';
+import { IMessageEx } from './lib/IMessageEx';
+import { scoreboardAnswer, scoreboardChange, scoreboardChangeWithIdentity, scoreboardQuery, scoreboardRanking, scoreboardSetAnswer } from './plugins/scoreboard';
+import { identityInfo, identityList, identitySet } from './plugins/identity';
 import config from '../data/config.json';
 
 var checkTimes = 0;
@@ -64,38 +64,27 @@ init().then(() => {
         //log.debug(data.msg);
         const msg = new IMessageEx(data.msg, "GUILD");// = data.msg as any;
 
+        global.redis.set("lastestMsgId", msg.id, { EX: 5 * 60 });
         await global.redis.hSet("id->name", msg.author.id, msg.author.username);
 
-        global.redis.set("lastestMsgId", msg.id, { EX: 5 * 60 });
-
         if (data.eventType == "MESSAGE_CREATE") {
-            findOpts(msg).then(async (opt) => {
-                switch (opt) {
-                    case "identityList":
-                        identityList(msg);
-                        break;
-                    case "identitySet":
-                        identitySet(msg);
-                        break;
-                    case "identityInfo":
-                        identityInfo(msg);
-                        break;
-                    case "scoreboardQuery":
-                        scoreboardQuery(msg);
-                        break;
-                    case "scoreboardRanking":
-                        scoreboardRanking(msg);
-                        break;
-                    case "scoreboardChange":
-                        scoreboardChange(msg);
-                        break;
-                    case "scoreboardChangeWithIdentity":
-                        scoreboardChangeWithIdentity(msg);
-                        break;
+            const opt = await findOpts(msg);
+            log.debug(`./plugins/${opt.path}:${opt.fnc}`);
+
+            try {
+                if (opt.path != "err") {
+                    const plugin = await import(`./plugins/${opt.path}.ts`);
+                    if (typeof plugin[opt.fnc] == "function") {
+                        (plugin[opt.fnc] as PluginFnc)(msg).catch(err => {
+                            log.error(err);
+                        });
+                    } else {
+                        log.error(`not found function ${opt.fnc}() at "${global._path}/src/plugins/${opt.path}.ts"`);
+                    }
                 }
-            }).catch(err => {
+            } catch (err) {
                 log.error(err);
-            });
+            }
         }
     });
 
@@ -107,28 +96,23 @@ init().then(() => {
         global.redis.set("lastestMsgId", msg.id, { EX: 5 * 60 });
         await global.redis.hSet("id->name", msg.author.id, msg.author.username);
 
-        const opts = msg.content.trim().split(" ");
-        findOpts(msg).then(async (opt) => {
-            switch (opt) {
-                case "scoreboardQuery":
-                    scoreboardQuery(msg);
-                    break;
-                case "scoreboardRanking":
-                    scoreboardRanking(msg);
-                    break;
-                case "scoreboardSetAnswer":
-                    scoreboardSetAnswer(msg);
-                    break;
-                /* case "scoreboardChangeWithIdentity":
-                    scoreboardChangeWithIdentity(msg);
-                    break; */
-                case "answer":
-                    scoreboardAnswer(msg);
-                    break;
+        const opt = await findOpts(msg);
+        log.debug(`./plugins/${opt.path}:${opt.fnc}`);
+
+        try {
+            if (opt.path != "err") {
+                const plugin = await import(`./plugins/${opt.path}.ts`);
+                if (typeof plugin[opt.fnc] == "function") {
+                    (plugin[opt.fnc] as PluginFnc)(msg).catch(err => {
+                        log.error(err);
+                    });
+                } else {
+                    log.error(`not found function ${opt.fnc}() at "${global._path}/src/plugins/${opt.path}.ts"`);
+                }
             }
-        }).catch(err => {
+        } catch (err) {
             log.error(err);
-        });
+        }
 
     });
 
@@ -136,4 +120,4 @@ init().then(() => {
     log.error(err);
 });
 
-
+type PluginFnc = (msg: IMessageEx) => Promise<any>
