@@ -1,7 +1,7 @@
 import { createOpenAPI, createWebsocket } from 'qq-guild-bot';
 import { createClient } from 'redis';
 import log from './lib/logger';
-import config from '../data/config.json';
+import config from '../config/config.json';
 
 export async function init() {
 

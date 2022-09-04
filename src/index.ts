@@ -4,7 +4,7 @@ import { findOpts } from './lib/findOpts';
 import { IMessageEx } from './lib/IMessageEx';
 import { scoreboardAnswer, scoreboardChange, scoreboardChangeWithIdentity, scoreboardQuery, scoreboardRanking, scoreboardSetAnswer } from './plugins/scoreboard';
 import { identityInfo, identityList, identitySet } from './plugins/identity';
-import config from '../data/config.json';
+import config from '../config/config.json';
 
 var checkTimes = 0;
 

@@ -16,7 +16,7 @@ export async function findOpts(msg: IMessageEx): Promise<{ path: string, fnc: st
                 describe: string;
             }
         }
-    } = (await import("../../data/opts.json")).default;
+    } = (await import("../../config/opts.json")).default;
 
     for (const mainKey in fnc) {
         for (const key in fnc[mainKey]) {

@@ -7,16 +7,24 @@
             "describe": "列出身份组"
         },
         "identitySet": {
-            "reg": "^#(设置身份组|身份组设置)$",
+            "reg": "^#(设置身份组|身份组设置)",
             "fnc": "identitySet",
             "type": ["GUILD"],
             "describe": "身份组设置"
         },
         "identityInfo": {
-            "reg": "^#(设置信息|信息设置)$",
+            "reg": "^#(设置信息|信息设置)",
             "fnc": "identityInfo",
             "type": ["GUILD"],
             "describe": "表情分配设置"
+        }
+    },
+    "another": {
+        "getRandomNums": {
+            "reg": "^#获取随机数\\s?(\\d+)\\s(\\d+)\\s(\\d+)$",
+            "fnc": "getRandomNums",
+            "type": ["GUILD", "DIRECT"],
+            "describe": "获取随机数xxx yyy zzz"
         }
     },
     "scoreboard": {
@@ -50,7 +58,7 @@
             "reg": "^#(添加|扣除)(.+)身份组(\\d+)(点数)?$",
             "fnc": "scoreboardChangeWithIdentity",
             "type": ["GUILD"],
-            "describe": "操作某身份组点数"
+            "describe": "(暂无法使用)操作某身份组点数"
         },
         "scoreboardAnswer": {
             "reg": ".*",
