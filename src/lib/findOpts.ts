@@ -4,7 +4,7 @@ import log from "./logger";
 
 export async function findOpts(msg: IMessageEx): Promise<{ path: string, fnc: string }> {
     if (!msg.content) return { path: "err", fnc: "err" };
-    const optStr = msg.content.trim().split(" ")[0];
+    //const optStr = msg.content.trim().split(" ")[0];
 
     const fnc: {
         [mainKey: string]: {
@@ -32,7 +32,7 @@ export async function findOpts(msg: IMessageEx): Promise<{ path: string, fnc: st
                     if (!(userInfo.data.roles.includes("2") || userInfo.data.roles.includes("4"))) continue;
                 }
             }
-            if (RegExp(opt.reg).test(optStr)) {
+            if (RegExp(opt.reg).test(msg.content)) {
                 return {
                     path: mainKey,
                     fnc: opt.fnc,
