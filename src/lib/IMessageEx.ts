@@ -62,7 +62,7 @@ export class IMessageEx {
     }
 
     async sendMsgEx(option: SendMsgOption) {
-        const { ref, imagePath, content } = option;
+        const { ref, imagePath, content, embed } = option;
         const { id, guild_id, channel_id } = this;
         if (imagePath) {
             var pushUrl =
@@ -90,12 +90,14 @@ export class IMessageEx {
                 return global.client.messageApi.postMessage(channel_id, {
                     content: content,
                     msg_id: id,
-                    message_reference: ref ? { message_id: id, } : undefined
+                    message_reference: ref ? { message_id: id, } : undefined,
+                    embed,
                 });
             } else {
                 return global.client.directMessageApi.postDirectMessage(guild_id, {
                     msg_id: id,
                     content: content,
+                    embed,
                 });
             }
         }
@@ -111,4 +113,5 @@ interface SendMsgOption {
     ref?: boolean,
     imagePath?: string,
     content?: string,
+    embed?: Embed,
 }

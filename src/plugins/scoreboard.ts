@@ -9,12 +9,19 @@ import config from '../../config/config.json';
  * @param msg 
  */
 export async function scoreboardQuery(msg: IMessageEx) {
-    global.redis.zScore(`scoreboard`, msg.author.id).then(score => {
-        if (score) {
-            msg.sendMsgEx({ content: `当前点数：${score}点` });
-        } else {
-            msg.sendMsgEx({ content: `未获取任何点数` });
-        }
+    const score = await global.redis.zScore(`scoreboard`, msg.author.id);
+    const answeredQuestions = await global.redis.hGet(`user:data:${msg.author.id}`, "answeredQuestions");
+
+    msg.sendMsgEx({
+        embed: {
+            title: `${msg.author.username}的点数信息`,
+            prompt: `${msg.author.username}的点数信息`,
+            thumbnail: { url: msg.author.avatar, },
+            fields: [
+                { name: score ? `当前点数：${score}点` : `未获取任何点数`, },
+                { name: answeredQuestions ? `回答题数：${answeredQuestions}题` : `从未回答任何问题` }
+            ],
+        },
     });
 }
 
@@ -162,6 +169,8 @@ export async function scoreboardAnswer(msg: IMessageEx) {
                     userName: msg.author.username,
                 });
                 return msg.sendMsgEx({ content: `问题回答正确，获得点数${memberNum["score"]}，当前总点数${nowScore}` });
+            }).then(() => {
+                return global.redis.hIncrBy(`user:data:${msg.author.id}`, "answeredQuestions", 1);
             }).then(() => {
                 return global.redis.hSet(`answers:${msg.content}`, "config", JSON.stringify(answerConfig));
             }).catch(err => {

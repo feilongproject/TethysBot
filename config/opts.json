@@ -29,7 +29,7 @@
     },
     "scoreboard": {
         "scoreboardQuery": {
-            "reg": "^#(查询点数|点数查询)$",
+            "reg": "^#(查询点数|点数查询|我的信息)$",
             "fnc": "scoreboardQuery",
             "type": ["GUILD", "DIRECT"],
             "permission": "anyone",
