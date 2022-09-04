@@ -32,12 +32,15 @@ export async function scoreboardQuery(msg: IMessageEx) {
 export async function scoreboardRanking(msg: IMessageEx) {
     global.redis.zRangeWithScores("scoreboard", 0, -1).then(async datas => {
         datas.sort((v1, v2) => v2.score - v1.score);
-        const sendStr: string[] = ["点数排名"];
+        var currentUserRank = -1;
+        const sendStr: string[] = [`<@${msg.author.id}>`, "点数排名"];
         for (const [iv, data] of datas.entries()) {
+            if (data.value == msg.author.id) currentUserRank = iv + 1;
             const username = await global.redis.hGet("id->name", data.value);
             sendStr.push(`${iv + 1}. ${username}   ${data.score}点数`);
         }
-        msg.sendMsgEx({ content: sendStr.join("\n") });
+        sendStr.push("", currentUserRank == -1 ? `未找到你的排名` : `当前排名：第${currentUserRank}名`);
+        return msg.sendMsgEx({ content: sendStr.join("\n") });
     }).catch(err => {
         log.error(err);
     });
@@ -59,6 +62,7 @@ export async function scoreboardChange(msg: IMessageEx) {
     const sendStr: string[] = [`已为以下用户${scReg![1]}点数${scScore}点`];
     const queue: Promise<number>[] = [];
     for (const user of msg.mentions) {
+        await global.redis.hSet("id->name", user.id, user.username);
         if (user.bot) continue;
         sendStr.push(`${user.username}`);
         queue.push(global.redis.zIncrBy(`scoreboard`, parseInt(scScore), user.id));
