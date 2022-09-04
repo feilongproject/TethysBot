@@ -1,5 +1,6 @@
-import { createOpenAPI, createWebsocket } from 'qq-guild-bot';
+import fs from "fs";
 import { createClient } from 'redis';
+import { createOpenAPI, createWebsocket } from 'qq-guild-bot';
 import log from './lib/logger';
 import config from '../config/config.json';
 
@@ -45,7 +46,23 @@ export async function init() {
     }).catch(err => {
         log.error(err);
     });
-    //log.debug("123");
+
+    const optFile = `${global._path}/config/opts.json`;
+    fs.watchFile(optFile, () => {
+        if (require.cache[optFile]) {
+            log.mark(`指令配置文件正在进行热更新`);
+            delete require.cache[optFile];
+        }
+    });
+    fs.watch(`${global._path}/src/plugins/`, (event, filename) => {
+        //log.debug(event, filename);
+        if (event != "change") return;
+        if (require.cache[`${global._path}/src/plugins/${filename}`]) {
+            log.mark(`文件${global._path}/src/plugins/${filename}已修改，正在执行热更新`);
+            delete require.cache[`${global._path}/src/plugins/${filename}`];
+        }
+    });
+
 }
 
 
