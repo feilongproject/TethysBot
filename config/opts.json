@@ -24,7 +24,13 @@
             "reg": "^#获取随机数\\s?(\\d+)\\s(\\d+)\\s(\\d+)$",
             "fnc": "getRandomNums",
             "type": ["GUILD", "DIRECT"],
-            "describe": "获取随机数xxx yyy zzz"
+            "describe": "#获取随机数xxx yyy zzz"
+        },
+        "warnWithReason": {
+            "reg": "^#警告(.+)\\s?原因(.+)",
+            "fnc": "warnWithReason",
+            "type": ["GUILD"],
+            "describe": "#警告@xxx原因yyy"
         }
     },
     "scoreboard": {

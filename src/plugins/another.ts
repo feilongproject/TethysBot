@@ -1,4 +1,5 @@
 import { IMessageEx } from "../lib/IMessageEx";
+import log from "../lib/logger";
 
 
 export async function getRandomNums(msg: IMessageEx) {
@@ -44,8 +45,37 @@ export async function getRandomNums(msg: IMessageEx) {
 
 }
 
+export async function warnWithReason(msg: IMessageEx) {
+    if (!msg.mentions || msg.mentions.length == 0) {
+        msg.sendMsgEx({ content: `未指定@人员，无法操作！` });
+        return true;
+    }
+    const reg = msg.content.match(/^#警告(.+)\s?原因(.+)/)!;
+    const reason = reg[2];
+    const someone = msg.mentions[0].id;
+    const sendStr: string[] = [];
 
+    global.redis.zRangeWithScores(`warn:uid:${someone}`, 0, -1).then(datas => {
+        sendStr.push(`<@${someone}>\n第${datas.length + 1}次警告`, `原因：${reason}`, `时间：${timeConver(msg.timestamp)}`);
+        for (const [iv, data] of datas.entries()) {
+            sendStr.push(`第${iv + 1}次警告`, `原因：${data.value}`);
+        }
+        return global.redis.zAdd(`warn:uid:${someone}`, { score: new Date().getTime(), value: reason });
+    }).then(() => {
+        msg.sendMsgEx({ content: sendStr.join("\n") });
+    }).catch(err => {
+        log.error(err);
+    });
 
-/* function random(max: number): number {
-    return parseInt(Math.random().toFixed(50).slice(2)) % (max + 1);
-} */
+}
+
+function timeConver(timestamp: number | string | Date) {
+    const date = new Date(timestamp);
+    const year = date.getFullYear().toString().padStart(4, "0");
+    const month = date.getMonth().toString().padStart(2, "0");
+    const day = date.getDate().toString().padStart(2, "0");
+    const hours = date.getHours().toString().padStart(2, "0");
+    const minutes = date.getMinutes().toString().padStart(2, "0");
+    const seconds = date.getSeconds().toString().padStart(2, "0");
+    return `${year}/${month}/${day} ${hours}:${minutes}:${seconds}`;
+}
