@@ -57,6 +57,7 @@ export async function scoreboardChange(msg: IMessageEx) {
     const scScore = scReg![2];
 
     if (!msg.mentions || msg.mentions.length == 0) {
+        msg.sendMsgEx({ content: `未指定@人员，无法操作！` });
         return;
     }
     const sendStr: string[] = [`已为以下用户${scReg![1]}点数${scScore}点`];
