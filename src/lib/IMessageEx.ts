@@ -28,7 +28,7 @@ export class IMessageEx {
         //log.debug(msg);
         this.author = msg.author;
         this.channel_id = msg.channel_id;
-        this.content = msg.content;
+        this.content = msg.content ? msg.content.trim() : `null msg content ${new Date().getTime()}`;
         this.guild_id = msg.guild_id;
         this.id = msg.id;
         this.member = msg.member;
