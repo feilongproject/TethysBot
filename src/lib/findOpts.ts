@@ -25,11 +25,16 @@ export async function findOpts(msg: IMessageEx): Promise<{ path: string, fnc: st
 
             if (opt.permission != "anyone") {
                 if (msg.messageType == "GUILD") {
-                    if (!(msg.member.roles.includes("2") || msg.member.roles.includes("4"))) continue;
+                    if ((msg.member && msg.member.roles) && !(msg.member.roles.includes("2") || msg.member.roles.includes("4"))) continue;
                 }
                 if (msg.messageType == "DIRECT") {
-                    const userInfo = await client.guildApi.guildMember(msg.src_guild_id!, msg.author.id);
-                    if (!(userInfo.data.roles.includes("2") || userInfo.data.roles.includes("4"))) continue;
+                    const userInfo = await client.guildApi.guildMember(msg.src_guild_id!, msg.author.id).catch(err => {
+                        log.error(err);
+                    });
+                    if (
+                        (userInfo && userInfo.data && userInfo.data.roles) &&
+                        !(userInfo.data.roles.includes("2") || userInfo.data.roles.includes("4"))
+                    ) continue;
                 }
             }
             if (RegExp(opt.reg).test(msg.content)) {
