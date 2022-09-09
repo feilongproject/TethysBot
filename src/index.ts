@@ -68,19 +68,20 @@ init().then(() => {
         await global.redis.hSet("id->name", msg.author.id, msg.author.username);
 
         if (data.eventType == "MESSAGE_CREATE") {
-            const opt = await findOpts(msg);
+            const opt = await findOpts(msg).catch(err => {
+                log.error(err);
+            });
+            if (!opt || opt.path == "err") return;
             log.debug(`./plugins/${opt.path}:${opt.fnc}`);
 
             try {
-                if (opt.path != "err") {
-                    const plugin = await import(`./plugins/${opt.path}.ts`);
-                    if (typeof plugin[opt.fnc] == "function") {
-                        (plugin[opt.fnc] as PluginFnc)(msg).catch(err => {
-                            log.error(err);
-                        });
-                    } else {
-                        log.error(`not found function ${opt.fnc}() at "${global._path}/src/plugins/${opt.path}.ts"`);
-                    }
+                const plugin = await import(`./plugins/${opt.path}.ts`);
+                if (typeof plugin[opt.fnc] == "function") {
+                    (plugin[opt.fnc] as PluginFnc)(msg).catch(err => {
+                        log.error(err);
+                    });
+                } else {
+                    log.error(`not found function ${opt.fnc}() at "${global._path}/src/plugins/${opt.path}.ts"`);
                 }
             } catch (err) {
                 log.error(err);
@@ -96,19 +97,20 @@ init().then(() => {
         global.redis.set("lastestMsgId", msg.id, { EX: 5 * 60 });
         await global.redis.hSet("id->name", msg.author.id, msg.author.username);
 
-        const opt = await findOpts(msg);
+        const opt = await findOpts(msg).catch(err => {
+            log.error(err);
+        });
+        if (!opt || opt.path == "err") return;
         log.debug(`./plugins/${opt.path}:${opt.fnc}`);
 
         try {
-            if (opt.path != "err") {
-                const plugin = await import(`./plugins/${opt.path}.ts`);
-                if (typeof plugin[opt.fnc] == "function") {
-                    (plugin[opt.fnc] as PluginFnc)(msg).catch(err => {
-                        log.error(err);
-                    });
-                } else {
-                    log.error(`not found function ${opt.fnc}() at "${global._path}/src/plugins/${opt.path}.ts"`);
-                }
+            const plugin = await import(`./plugins/${opt.path}.ts`);
+            if (typeof plugin[opt.fnc] == "function") {
+                (plugin[opt.fnc] as PluginFnc)(msg).catch(err => {
+                    log.error(err);
+                });
+            } else {
+                log.error(`not found function ${opt.fnc}() at "${global._path}/src/plugins/${opt.path}.ts"`);
             }
         } catch (err) {
             log.error(err);
