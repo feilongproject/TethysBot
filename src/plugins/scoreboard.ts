@@ -66,7 +66,7 @@ export async function scoreboardChange(msg: IMessageEx) {
         await global.redis.hSet("id->name", user.id, user.username);
         if (user.bot) continue;
         sendStr.push(`${user.username}`);
-        queue.push(global.redis.zIncrBy(`scoreboard`, parseInt(scScore), user.id));
+        queue.push(global.redis.zIncrBy(`scoreboard`, parseInt(scScore) * scOpt, user.id));
     }
     Promise.all(queue).then(() => {
         msg.sendMsgEx({ content: sendStr.join("\n") });

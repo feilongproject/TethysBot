@@ -38,7 +38,7 @@ export async function getRandomNums(msg: IMessageEx) {
     randoms.nums = randoms.nums.sort((v1, v2) => 0.5 - Math.random());
 
     const end = ["生成的随机数为："];
-    for (var i = 0; i <= randoms.numTimes; i++) {
+    for (var i = 0; i < randoms.numTimes; i++) {
         end.push(randoms.nums.pop()!.toString());
     }
     msg.sendMsgEx({ content: end.join(`\n`) });
