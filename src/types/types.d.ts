@@ -1,8 +1,13 @@
 import { RedisClientType } from "@redis/client";
-import { Ark, Embed, IMember, IMessage, IUser, MessageAttachment } from "qq-guild-bot"
+import { Logger } from "log4js";
+import { IMessage } from "qq-guild-bot"
 import { OpenAPI, WebsocketClient } from "./qq-guild-bot";
 
 declare global {
+    var devEnv: boolean;
+    var adminId: string;
+    var log: Logger;
+    var meId: string;
     var _path: string;
     var client: OpenAPI;
     var ws: WebsocketClient;

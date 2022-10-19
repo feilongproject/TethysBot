@@ -2,8 +2,6 @@ import { init } from './init';
 import log from './lib/logger';
 import { findOpts } from './lib/findOpts';
 import { IMessageEx } from './lib/IMessageEx';
-import { scoreboardAnswer, scoreboardChange, scoreboardChangeWithIdentity, scoreboardQuery, scoreboardRanking, scoreboardSetAnswer } from './plugins/scoreboard';
-import { identityInfo, identityList, identitySet } from './plugins/identity';
 import config from '../config/config.json';
 
 var checkTimes = 0;
@@ -11,14 +9,12 @@ var checkTimes = 0;
 init().then(() => {
 
     global.ws.on('GUILD_MESSAGE_REACTIONS', async (data: IntentMessage) => {
-        //log.debug(data);
-        //if (data.msg.guild_id != "15134591271843561181") return;//测试用
+        if (devEnv && data.msg.user.id != adminId) return;//开发环境专用
 
         const guildId = data.msg.guild_id;
         const msgId = await global.redis.get(`identityMsgId:${guildId}`).catch(err => log.error(err));
         if (!msgId) return;
         if (data.msg.target.id != msgId) return;
-
 
         const allData = await global.redis.hGetAll(`emojiIdentity:${guildId}`).catch(err => {
             log.error(err);
@@ -59,9 +55,9 @@ init().then(() => {
     });
 
     global.ws.on('GUILD_MESSAGES', async (data: IntentMessage) => {
-        //if (data.msg.guild_id == "12129458028700690480") return;//测试用
         if (data.eventType != "MESSAGE_CREATE") return;
-        //log.debug(data.msg);
+        if (devEnv && data.msg.user.id != adminId) return;//开发环境专用
+
         const msg = new IMessageEx(data.msg, "GUILD");// = data.msg as any;
 
         global.redis.set("lastestMsgId", msg.id, { EX: 5 * 60 });
@@ -71,6 +67,8 @@ init().then(() => {
             const opt = await findOpts(msg).catch(err => {
                 log.error(err);
             });
+            //if (opt && msg.author.id != "7681074728704576201") opt.path = "err";//break test
+            //log.debug(opt)//break test
             if (!opt || opt.path == "err") return;
             log.debug(`./plugins/${opt.path}:${opt.fnc}`);
 
@@ -89,9 +87,9 @@ init().then(() => {
         }
     });
 
-
     global.ws.on("DIRECT_MESSAGE", async (data: IntentMessage) => {
-        //log.debug(data.msg);
+        if (devEnv && data.msg.user.id != adminId) return;//开发环境专用
+
         const msg = new IMessageEx(data.msg, "DIRECT");// = data.msg as any;
 
         global.redis.set("lastestMsgId", msg.id, { EX: 5 * 60 });
@@ -100,6 +98,7 @@ init().then(() => {
         const opt = await findOpts(msg).catch(err => {
             log.error(err);
         });
+        //if (opt) opt.path = "err";//break test
         if (!opt || opt.path == "err") return;
         log.debug(`./plugins/${opt.path}:${opt.fnc}`);
 
