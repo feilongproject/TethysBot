@@ -1,5 +1,4 @@
 import { IMessageEx } from "../lib/IMessageEx";
-import log from "../lib/logger";
 
 
 export async function getRandomNums(msg: IMessageEx) {

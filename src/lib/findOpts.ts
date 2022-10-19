@@ -1,5 +1,4 @@
 import { IMessageEx } from "./IMessageEx";
-import log from "./logger";
 
 
 export async function findOpts(msg: IMessageEx): Promise<{ path: string, fnc: string }> {
