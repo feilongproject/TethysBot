@@ -1,5 +1,4 @@
 import { init } from './init';
-import log from './lib/logger';
 import { findOpts } from './lib/findOpts';
 import { IMessageEx } from './lib/IMessageEx';
 import config from '../config/config.json';
@@ -9,7 +8,8 @@ var checkTimes = 0;
 init().then(() => {
 
     global.ws.on('GUILD_MESSAGE_REACTIONS', async (data: IntentMessage) => {
-        if (devEnv && data.msg.user.id != adminId) return;//开发环境专用
+        //log.debug(data.msg);
+        if (devEnv && data.msg.user_id != adminId) return;//开发环境专用
 
         const guildId = data.msg.guild_id;
         const msgId = await global.redis.get(`identityMsgId:${guildId}`).catch(err => log.error(err));
@@ -56,7 +56,7 @@ init().then(() => {
 
     global.ws.on('GUILD_MESSAGES', async (data: IntentMessage) => {
         if (data.eventType != "MESSAGE_CREATE") return;
-        if (devEnv && data.msg.user.id != adminId) return;//开发环境专用
+        if (devEnv && data.msg.author.id != adminId) return;//开发环境专用
 
         const msg = new IMessageEx(data.msg, "GUILD");// = data.msg as any;
 
@@ -88,7 +88,7 @@ init().then(() => {
     });
 
     global.ws.on("DIRECT_MESSAGE", async (data: IntentMessage) => {
-        if (devEnv && data.msg.user.id != adminId) return;//开发环境专用
+        if (devEnv && data.msg.author.id != adminId) return;//开发环境专用
 
         const msg = new IMessageEx(data.msg, "DIRECT");// = data.msg as any;
 
