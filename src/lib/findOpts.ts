@@ -1,3 +1,4 @@
+import { IMember } from "qq-guild-bot";
 import { IMessageEx } from "./IMessageEx";
 
 
@@ -21,29 +22,38 @@ export async function findOpts(msg: IMessageEx): Promise<{ path: string, fnc: st
         for (const key in fnc[mainKey]) {
             const opt = fnc[mainKey][key];
             if (!opt.type.includes(msg.messageType)) continue;
-
+            if (!RegExp(opt.reg).test(msg.content)) continue;
             if (opt.permission != "anyone") {
-                if (msg.messageType == "GUILD") {
-                    if ((msg.member && msg.member.roles) && !(msg.member.roles.includes("2") || msg.member.roles.includes("4"))) continue;
-                }
-                if (msg.messageType == "DIRECT") {
-                    const userInfo = await client.guildApi.guildMember(msg.src_guild_id!, msg.author.id).catch(err => {
-                        log.error(err);
-                    });
-                    if (
-                        (userInfo && userInfo.data && userInfo.data.roles) &&
-                        !(userInfo.data.roles.includes("2") || userInfo.data.roles.includes("4"))
-                    ) continue;
-                }
+                if (msg.messageType == "GUILD"
+                    && !await findAdmin(msg.author.id, msg.member)
+                ) continue;
+                if (msg.messageType == "DIRECT"
+                    && !await findAdmin(msg.author.id, (await client.guildApi.guildMember(msg.src_guild_id!, msg.author.id)).data)
+                ) continue;
             }
-            if (RegExp(opt.reg).test(msg.content)) {
-                return {
-                    path: mainKey,
-                    fnc: opt.fnc,
-                };
+            return {
+                path: mainKey,
+                fnc: opt.fnc,
             };
+
         }
     }
 
     return { path: "err", fnc: "err" };
+}
+
+async function findAdmin(uid: string, iMember?: IMember): Promise<boolean> {
+    if (iMember && (iMember.roles.includes("2") || iMember.roles.includes("4")))
+        return true;
+
+    return await redis.hGet("auth", uid).then(auth => {
+        if (auth == "admin") return true;
+        return false;
+    });
+
+}
+
+export function debugAdmin(uid: string): boolean {
+    if (devEnv && adminId.includes(uid)) return true;
+    return false;
 }

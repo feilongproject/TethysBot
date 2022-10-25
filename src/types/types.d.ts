@@ -5,7 +5,7 @@ import { OpenAPI, WebsocketClient } from "./qq-guild-bot";
 
 declare global {
     var devEnv: boolean;
-    var adminId: string;
+    var adminId: string[];
     var log: Logger;
     var meId: string;
     var _path: string;
@@ -32,7 +32,6 @@ declare global {
         eventId: string,
         msg: IMessage & GUILD_MEMBER & MESSAGE_REACTION_ADD,
     }
-
 
     interface MESSAGE_REACTION_ADD {
         channel_id: string,
@@ -66,8 +65,6 @@ declare global {
         name: string,
         id: string,
     }
-
-
 
 }
 
