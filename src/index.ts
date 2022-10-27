@@ -1,5 +1,6 @@
 import { init } from './init';
-import { debugAdmin, findOpts } from './lib/findOpts';
+import { debugAdmin } from './lib/common';
+import { findOpts } from './lib/findOpts';
 import { IMessageEx } from './lib/IMessageEx';
 import config from '../config/config.json';
 
