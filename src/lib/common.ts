@@ -18,6 +18,9 @@ export async function isAdmin(uid: string, iMember?: IMember): Promise<boolean> 
 }
 
 export function debugAdmin(uid: string): boolean {
-    if (devEnv && adminId.includes(uid)) return true;
-    return false;
+    if (devEnv) {
+        if (adminId.includes(uid)) return true;
+        else return false;
+    }
+    return true;
 }
