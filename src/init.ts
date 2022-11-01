@@ -5,10 +5,7 @@ import _log, { setDevLog } from './lib/logger';
 import config from '../config/config.json';
 
 export async function init() {
-    global.adminId = [];
-    if (config.admin)
-        for (const _usr of config.admin)
-            adminId.push(_usr.uid);
+    global.adminId = ["7681074728704576201"];
 
     global.log = _log;
     global._path = process.cwd();
