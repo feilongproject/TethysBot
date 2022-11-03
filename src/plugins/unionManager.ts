@@ -8,6 +8,8 @@ export async function createUnion(msg: IMessageEx) {
         return msg.sendMsgEx({ content: `公会名称为空` });
     } else if ((await redis.exists(`union:${unionName}`)) == 1) {
         return msg.sendMsgEx({ content: `该公会名称已存在` });
+    } else if (/\d/.test(unionName)) {
+        return msg.sendMsgEx({ content: `公会名称中不可出现阿拉伯数字` });
     }
     const unionList = await getUnionInformationList();
     for (const unionListCell of unionList) {
@@ -96,17 +98,20 @@ export async function changeUnionScore(msg: IMessageEx) {
     if (!await isAdmin(msg.author.id, msg.member)) msg.sendMsgEx({
         content: `权限不足`,
     });
-    const exp = /^(添加|扣除)(.*)公会积分$/.exec(msg.content)!;
+    const exp = /^(添加|扣除)(.+[^\d])(\d+)积分$/.exec(msg.content)!;
     const type = (exp[1] == "添加") ? 1 : ((exp[1] == "扣除") ? -1 : 0);
     const unionName = exp[2].trim();
-    const optScore = type * Number(exp[3]);//?
+    const optScore = type * Number(exp[3]);
 
-    if (await redis.exists(`union:${unionName}`)) return msg.sendMsgEx({
+    if (!await redis.exists(`union:${unionName}`)) return msg.sendMsgEx({
         content: `${unionName}公会不存在`,
     });
-
-
-
+    //log.debug(unionName, optScore);
+    return redis.hIncrBy(`union:${unionName}`, "integral", optScore).then((_n) => {
+        return msg.sendMsgEx({
+            content: `已${type == 1 ? `添加` : `扣除`}${unionName}公会${Math.abs(optScore)}积分，目前一共${_n}积分`,
+        });
+    });
 }
 
 /**
