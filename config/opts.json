@@ -97,7 +97,7 @@
             "describe": "获取积分在前十的公会的排行榜"
         },
         "changeUnionScore": {
-            "reg": "^(添加|扣除)(.+[^\\d])(\\d+)积分$",
+            "reg": "^(增加|扣减)(.+[^\\d])(\\d+)积分$",
             "fnc": "changeUnionScore",
             "type": ["GUILD", "DIRECT"],
             "describe": "（管理员）对指定公会的积分进行操作"
