@@ -3,40 +3,40 @@ import { IMember } from "qq-guild-bot";
 import { IMessageEx } from "../lib/IMessageEx";
 import config from '../../config/config.json';
 
-/**
- * 查询用户点数
- * @param msg 
- */
 export async function scoreboardQuery(msg: IMessageEx) {
-    const score = await global.redis.zScore(`scoreboard`, msg.author.id);
+    const score = await global.redis.zScore(`scoreboard:积分`, msg.author.id);
     const answeredQuestions = await global.redis.hGet(`user:data:${msg.author.id}`, "answeredQuestions");
-
     msg.sendMsgEx({
         embed: {
-            title: `${msg.author.username}的点数信息`,
-            prompt: `${msg.author.username}的点数信息`,
+            title: `${msg.author.username}的积分信息`,
+            prompt: `${msg.author.username}的积分信息`,
             thumbnail: { url: msg.author.avatar, },
             fields: [
-                { name: score ? `当前点数：${score}点` : `未获取任何点数`, },
+                { name: `当前积分：${score}` },
                 { name: answeredQuestions ? `回答题数：${answeredQuestions}题` : `从未回答任何问题` }
             ],
         },
     });
 }
 
-/**
- * 查询点数排名
- * @param msg 
- */
-export async function scoreboardRanking(msg: IMessageEx) {
-    global.redis.zRangeWithScores("scoreboard", 0, -1).then(async datas => {
+export async function scoreboardRankList(msg: IMessageEx) {
+    const boardName = /^(.+)排名$/.exec(msg.content)![1];
+
+    if (!await redis.hExists(`scoreboardList`, boardName)) {
+        return msg.sendMsgEx({
+            content: `未找到指定榜单`,
+        });
+    }
+
+    redis.zRangeWithScores(`scoreboard:${boardName}`, 0, -1).then(async datas => {
         datas.sort((v1, v2) => v2.score - v1.score);
         var currentUserRank = -1;
-        const sendStr: string[] = [`<@${msg.author.id}>`, "点数排名"];
+        const sendStr: string[] = [`<@${msg.author.id}>`, "分数排名"];
         for (const [iv, data] of datas.entries()) {
             if (data.value == msg.author.id) currentUserRank = iv + 1;
-            const username = await global.redis.hGet("id->name", data.value);
-            sendStr.push(`${iv + 1}. ${username}   ${data.score}点数`);
+            if (iv >= 10) continue;
+            const username = await global.redis.hGet("id->name", data.value) || data.value;
+            sendStr.push(`${iv + 1}. ${username}   ${data.score}分`);
         }
         sendStr.push("", currentUserRank == -1 ? `未找到你的排名` : `当前排名：第${currentUserRank}名`);
         return msg.sendMsgEx({ content: sendStr.join("\n") });
@@ -45,43 +45,93 @@ export async function scoreboardRanking(msg: IMessageEx) {
     });
 }
 
-/**
- * 管理员对点数操作
- * @param msg 
- * @returns 
- */
-export async function scoreboardChange(msg: IMessageEx) {
-    const scReg = /^#(添加|扣除)(\d+)点数/.exec(msg.content);
-    const scOpt = scReg![1] == "添加" ? 1 : -1;
-    const scScore = scReg![2];
-
-    if (!msg.mentions || msg.mentions.length == 0) {
-        msg.sendMsgEx({ content: `未指定@人员，无法操作！` });
-        return;
+export async function scoreboardRankListMy(msg: IMessageEx) {
+    const boardList = await redis.hKeys("scoreboardList");
+    const rankListMy: { score: number; value: string; rank: number; boardName: string; f: boolean; }[] = [];
+    const l: Promise<{ boardName: string; sc: { score: number; value: string; }[] }>[] = [];
+    for (const boardName of boardList) {
+        l.push(redis.zRangeWithScores(`scoreboard:${boardName}`, 0, -1).then(sc => {
+            sc.sort((v1, v2) => v2.score - v1.score);
+            return { sc, boardName };
+        }));
     }
-    const sendStr: string[] = [`已为以下用户${scReg![1]}点数${scScore}点`];
+    await Promise.all(l).then((rankLists) => {
+        for (const list of rankLists) {
+            var f = false;
+            for (const [iv, sc] of list.sc.entries()) {
+                if (sc.value == msg.author.id) {
+                    f = true;
+                    rankListMy.push({ ...sc, rank: iv, boardName: list.boardName, f });
+                    break;
+                }
+            }
+            if (!f) rankListMy.push({ score: 0, value: "", rank: list.sc.length, boardName: list.boardName, f });
+        }
+    });
+
+    var rankListStr: string[] = [`<@${msg.author.id}>`];
+    for (const rank of rankListMy) {
+        rankListStr.push(`榜单名称：${rank.boardName} 排名：第${rank.rank + 1}名 ${rank.score}分`);
+    }
+    return msg.sendMsgEx({ content: rankListStr.join(`\n`), });
+}
+
+export async function scoreboardList(msg: IMessageEx) {
+    const boards = await redis.hKeys(`scoreboardList`);
+    /* const listStr :string[]= [];
+    for (const b of boards) {
+        listStr.push(``);
+    } */
+    boards.unshift(`当前榜单列表：`);
+    return msg.sendMsgEx({ content: boards.join("\n") });
+}
+
+export async function scoreboardCreate(msg: IMessageEx) {
+    const reg = /^(添加|删除)(.+)榜单$/.exec(msg.content)!;
+    const opt = reg[1];
+    const boardName = reg[2];
+    if (opt == "添加") {
+        return redis.hSet(`scoreboardList`, boardName, 1).then(() => {
+            return msg.sendMsgEx({ content: `已添加榜单：${boardName}` });
+        });
+    } else {
+        return redis.hDel(`scoreboardList`, boardName).then(() => {
+            return msg.sendMsgEx({ content: `已删除榜单：${boardName}` });
+        });
+    }
+}
+
+export async function scoreboardChange(msg: IMessageEx) {
+    const scReg = /^(添加|扣除)\s*(<@!?\d+>\s*)+(\d+)(.+)$/.exec(msg.content)!;
+    const scOpt = scReg[1] == "添加" ? 1 : -1;
+    const scScore = Number(scReg[3]) * scOpt;
+    const boardName = scReg[4];
+
+    if (!await redis.hExists(`scoreboardList`, boardName))
+        return msg.sendMsgEx({
+            content: `未找到指定榜单`,
+        });
+    if (!msg.mentions || msg.mentions.length == 0) return msg.sendMsgEx({ content: `未指定@人员，无法操作！` });
+
+    const sendStr: string[] = [`已为以下用户${scReg[1]}${boardName}${scScore}点`];
     const queue: Promise<number>[] = [];
     for (const user of msg.mentions) {
         await global.redis.hSet("id->name", user.id, user.username);
         if (user.bot) continue;
         sendStr.push(`${user.username}`);
-        queue.push(global.redis.zIncrBy(`scoreboard`, parseInt(scScore) * scOpt, user.id));
+        queue.push(global.redis.zIncrBy(`scoreboard:${boardName}`, scScore, user.id));
     }
     Promise.all(queue).then(() => {
         msg.sendMsgEx({ content: sendStr.join("\n") });
     });
 }
 
-/**
- * 管理员设置答案对应的点数
- * @param msg 
- */
 export async function scoreboardSetAnswer(msg: IMessageEx) {
-    const regAnswer = /^#答案(.+)点数(\d+)人数(\d+)$/.exec(msg.content);
+    const regAnswer = /^答案(.+)积分(\d+)人数(\d+)$/.exec(msg.content)!;
     //log.debug(regAnswer);
-    const answer = regAnswer![1];
-    const score = regAnswer![2];
-    const memberNum = regAnswer![3];
+    const answer = regAnswer[1];
+    const score = regAnswer[2];
+    const memberNum = regAnswer[3];
     global.redis.hSet(`answers:${answer}`, "answer", answer);
     global.redis.hSet(`answers:${answer}`, "score", score);
     global.redis.hSet(`answers:${answer}`, "memberNum", memberNum);
@@ -95,14 +145,14 @@ export async function scoreboardSetAnswer(msg: IMessageEx) {
         content:
             `答案已设置` +
             `\n答案：${answer}` +
-            `\n点数：${score}` +
+            `\n积分：${score}` +
             `\n人数：${memberNum}`
     });
 }
 
 //暂时无法使用
 export async function scoreboardChangeWithIdentity(msg: IMessageEx) {
-    const scReg = /^#(添加|扣除)(.+)身份组(\d+)(点数)?$/.exec(msg.content);
+    const scReg = /^#(添加|扣除)(.+)身份组(\d+)(积分)?$/.exec(msg.content);
     const scOpt = scReg![1] == "添加" ? 1 : -1;
     const partId = scReg![2];
     const scScore = scReg![3];
@@ -137,7 +187,7 @@ export async function scoreboardChangeWithIdentity(msg: IMessageEx) {
                 );
             }
             Promise.all(queue).then(que => {
-                msg.sendMsgEx({ content: `已对身份组id:${partId}的所有${que.length}个用户的点数变更了${parseInt(scScore) * scOpt}` });
+                msg.sendMsgEx({ content: `已对身份组id:${partId}的所有${que.length}个用户的积分变更了${parseInt(scScore) * scOpt}` });
             }).catch(err => {
                 log.error(err);
             });
@@ -145,10 +195,6 @@ export async function scoreboardChangeWithIdentity(msg: IMessageEx) {
     }
 }
 
-/**
- * 回答问题
- * @param msg 
- */
 export async function scoreboardAnswer(msg: IMessageEx) {
     const userId = msg.author.id;
     global.redis.hGetAll(`answers:${msg.content}`).then(memberNum => {
@@ -156,23 +202,20 @@ export async function scoreboardAnswer(msg: IMessageEx) {
             const answerConfig: AnswerConfig = JSON.parse(memberNum["config"]);
 
             //&& parseInt(memberNum["memberNum"]) > 0
-            if (answerConfig.useUsers.length >= parseInt(memberNum["memberNum"])) {
-                msg.sendMsgEx({ content: `回答人数已达上限` });
-                return;
+            if (answerConfig.useUsers.length >= Number(memberNum["memberNum"])) {
+                return msg.sendMsgEx({ content: `回答人数已达上限` });
             }
             for (const useUser of answerConfig.useUsers) {
-                if (useUser.userId == msg.author.id) {
-                    msg.sendMsgEx({ content: `问题已回答` });
-                    return;
-                }
+                if (useUser.userId == msg.author.id)
+                    return msg.sendMsgEx({ content: `问题已回答` });
             }
 
-            global.redis.zIncrBy(`scoreboard`, parseInt(memberNum["score"]), userId).then(nowScore => {
+            global.redis.zIncrBy(`scoreboard:积分`, Number(memberNum["score"]), userId).then(nowScore => {
                 answerConfig.useUsers.push({
                     userId: msg.author.id,
                     userName: msg.author.username,
                 });
-                return msg.sendMsgEx({ content: `问题回答正确，获得点数${memberNum["score"]}，当前总点数${nowScore}` });
+                return msg.sendMsgEx({ content: `问题回答正确，获得积分${memberNum["score"]}，当前总积分${nowScore}` });
             }).then(() => {
                 return global.redis.hIncrBy(`user:data:${msg.author.id}`, "answeredQuestions", 1);
             }).then(() => {
@@ -201,8 +244,6 @@ async function getRoleMember(guildId: string, roleId: string, start_index = 0, l
         log.error(err);
     });
 }
-
-
 
 
 interface RoleMember {

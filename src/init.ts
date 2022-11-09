@@ -5,7 +5,7 @@ import _log, { setDevLog } from './lib/logger';
 import config from '../config/config.json';
 
 export async function init() {
-    global.adminId = ["7681074728704576201"];
+    global.adminId = ["7681074728704576201", "9540810258706627170"];
 
     global.log = _log;
     global._path = process.cwd();
@@ -80,6 +80,7 @@ export async function init() {
         global.meId = res.data.id;
     });
 
+    redis.hSet("scoreboardList", "积分", 1);
     /* setInterval(() => {
         log.debug("##########重新建立链接中##########");
         global.ws.disconnect();
