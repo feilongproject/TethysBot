@@ -1,7 +1,7 @@
 import fs from "fs";
 import fetch from 'node-fetch';
 import FormData from 'form-data';
-import { Ark, Embed, IMember, IMessage, IUser, MessageAttachment, MessageToCreate } from "qq-guild-bot";
+import { Embed, IMember, IMessage, IUser, MessageToCreate } from "qq-guild-bot";
 import config from '../../config/config.json';
 
 
@@ -17,7 +17,7 @@ export class IMessageEx {
     seq_in_channel?: string;
     timestamp: string;
     src_guild_id?: string;
-    mentions: IUser[];
+    mentions?: IUser[];
 
     guildName?: string;
     channelName?: string;
@@ -100,6 +100,30 @@ export class IMessageEx {
                 });
             }
         }
+    }
+
+    async sendMarkdown(templateId: string, _params?: { [key: string]: string }, keyboardId?: string) {
+        const params: { key: string; values: [string]; }[] = [];
+        for (const key in _params) params.push({ key, values: [_params[key]] });
+        return fetch(`https://api.sgroup.qq.com/channels/${this.channel_id}/messages`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bot ${config.initConfig.appID}.${config.initConfig.token}`,
+            }, body: JSON.stringify({
+                markdown: {
+                    custom_template_id: templateId,
+                    params: params,
+                },
+                keyboard: {
+                    id: keyboardId,
+                },
+            }),
+        }).then(res => {
+            return res.json();
+        }).catch(err => {
+            log.error(err);
+        });
     }
 }
 
