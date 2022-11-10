@@ -1,5 +1,6 @@
-import { idToName, isAdmin, sleep } from "../lib/common";
+import { isAdmin } from "./admin";
 import { IMessageEx } from "../lib/IMessageEx";
+import { idToName, sleep, timeConver } from "../lib/common";
 
 
 export async function createUnion(msg: IMessageEx) {
@@ -12,18 +13,16 @@ export async function createUnion(msg: IMessageEx) {
         return msg.sendMsgEx({ content: `公会名称中不可出现阿拉伯数字` });
     }
     const unionList = await getUnionInformationList();
-    for (const unionListCell of unionList) {
-        if (unionListCell.master == msg.author.id)
-            return msg.sendMsgEx({ content: `您已创建过公会` });
-        if (memberIsInUnion(msg.author.id, unionListCell))
-            return msg.sendMsgEx({ content: `您已加入公会` });
-    }
+    const inUnion = await findMemberInUnions(unionList, msg.author.id);
+    if (inUnion?.auth == "master") return msg.sendMsgEx({ content: `您已创建过公会` });
+    if (inUnion?.auth == "member") return msg.sendMsgEx({ content: `您已加入公会` });
+    if (inUnion?.auth == "invited") return msg.sendMsgEx({ content: `您有一个来自${inUnion.name}公会的邀请` });
     //log.debug("create", unionName);
     return redis.hSet(`union:${unionName}`, [
         [`master`, msg.author.id],
-        [`member:${msg.author.id}`, "master"],
         [`integral`, 0],
         ["memberLimit", 10],
+        [`member:${msg.author.id}`, "master"],
     ]).then(async () => {
         return msg.sendMsgEx({
             content: `公会创建成功` +
@@ -35,44 +34,32 @@ export async function createUnion(msg: IMessageEx) {
 }
 
 export async function getUnionInformation(msg: IMessageEx) {
-    const _unionName = msg.content.replaceAll("公会信息", "").trim();
-    const unionName = _unionName || await redis.keys(`union:*`).then(async (__unionNames) => {
-        for (const __unionName of __unionNames) {
-            //log.debug(__unionName, `member:${msg.author.id}`, await redis.hExists(__unionName, `member:${msg.author.id}`));
-            if (await redis.hExists(__unionName, `member:${msg.author.id}`))
-                return __unionName.replace(/^union:/, "");
-        }
-        return undefined;
-    });
+    const unionName = msg.content.replaceAll("公会信息", "").trim();
 
-    if (!unionName || !await redis.exists(`union:${unionName}`)) {
-        if (_unionName) return msg.sendMsgEx({ content: `未查询到<${_unionName}>公会信息，请确认公会名称无误后再次查询` });
-        else return msg.sendMsgEx({ content: `请输入要查询的公会名称` });
+    if (unionName && !await redis.exists(`union:${unionName}`))
+        return msg.sendMsgEx({ content: `未查询到<${unionName}>公会信息，请确认公会名称无误后再次查询` });
+
+    const unionInformationList = (await getUnionInformationList()).sort((a, b) => b.integral - a.integral);
+    const findUnion = unionName ? await getUnionInformationMeta(`union:${unionName}`) : await findMemberInUnions(unionInformationList, msg.author.id, ["master", "member"]);
+
+    if (!findUnion) return msg.sendMsgEx({ content: `请输入要查询的公会名称` });
+
+    const memberStrList: string[] = [];
+    var rankStr = ``;
+    for (const [index, _unionInfo] of unionInformationList.entries()) {
+        if (_unionInfo.name == (unionName || findUnion.name)) {
+            for (const member of _unionInfo.members)
+                if (member.auth == "member") memberStrList.push(`${await idToName(member.uid)}`);
+            rankStr = `第${index + 1}名`;
+        }
     }
 
-    const { unionInfo, memberStrList, rankStr } = await getUnionInformationList().then(async unionList => {
-        unionList.sort((a, b) => b.integral - a.integral);
-        for (const [index, r] of unionList.entries()) {
-            if (r.name == unionName) {
-                const _memberStrList: string[] = [];
-                for (const member of r.members)
-                    _memberStrList.push(`${await idToName(member.uid)}`);
-                return {
-                    unionInfo: r,
-                    memberStrList: _memberStrList,
-                    rankStr: `第${index + 1}名`,
-                };
-            }
-        }
-        throw new Error("未查询到公会");
-    });
-
     return msg.sendMsgEx({
-        content: `查询${_unionName ? `公会<${unionName}>` : "已加入公会"}的信息如下` +
-            `\n公会名称：${unionName}` +
-            `\n公会会长：${await idToName(unionInfo.master)}` + /* `(id：${unionMaster})` + */
-            `\n公会成员：${memberStrList.join(`\t`)}` +
-            `\n公会积分：${await redis.hGet(`union:${unionName}`, "integral")}` +
+        content: //`查询${unionName ? `公会<${unionName}>` : "已加入公会"}的信息如下\n` +
+            `公会名称：${findUnion.name}` +
+            `\n公会会长：${await idToName(findUnion.master)}` + /* `(id：${unionMaster})` + */
+            `\n公会成员：${memberStrList.join(`，`)}` +
+            `\n公会积分：${findUnion.integral}` +
             `\n公会排名：${rankStr}`,
     });
 }
@@ -85,7 +72,7 @@ export async function getUnionRank(msg: IMessageEx) {
     var inUnion: string | null = null;
     for (const [index, unionInfo] of unionList.entries()) {
         const findMember = memberIsInUnion(msg.author.id, unionInfo);
-        if (findMember) inUnion = `${unionInfo.name}公会排名：${index}`;
+        if (findMember) inUnion = `${unionInfo.name}公会排名：${index + 1}`;
         if (index >= 10) continue;
         rankStr.push(`${medalStr[index]}  ${unionInfo.name}公会  会长：${await idToName(unionInfo.master)}`);
     }
@@ -99,7 +86,7 @@ export async function changeUnionScore(msg: IMessageEx) {
         content: `权限不足`,
     });
     const exp = /^(增加|扣减)(.+[^\d])(\d+)积分$/.exec(msg.content)!;
-    const type = (exp[1] == "添加") ? 1 : ((exp[1] == "扣除") ? -1 : 0);
+    const type = exp[1].includes("加") ? 1 : (exp[1].includes("扣") ? -1 : 0);
     const unionName = exp[2].trim();
     const optScore = type * Number(exp[3]);
 
@@ -114,14 +101,65 @@ export async function changeUnionScore(msg: IMessageEx) {
     });
 }
 
-/**
- * This TODO
- */
 export async function inviteJoinUnion(msg: IMessageEx) {
-    log.debug(msg.mentions);
-    for (const inviteMember of msg.mentions) {
-        sleep(500);
+
+    if (!msg.mentions) return msg.sendMsgEx({ content: `未指定邀请用户` });
+
+    const unionInformationList = await getUnionInformationList();
+    const inviteUnionInfo = await findMemberInUnions(unionInformationList, msg.author.id);
+
+    if (!inviteUnionInfo) {
+        return msg.sendMsgEx({ content: `您还没有公会，请先创建公会吧`, });
+    } else if (inviteUnionInfo.auth != "master") {
+        return msg.sendMsgEx({ content: `您还不是${inviteUnionInfo.name}公会会长，不可邀请他人入会`, });
     }
+
+    for (const inviteMember of msg.mentions) {
+        if (inviteUnionInfo.members.length > inviteUnionInfo.memberLimit) {
+            return msg.sendMsgEx({ content: `当前公会已满人` });
+        } else {
+            const _inviteMemberUnionInfo = await findMemberInUnions(unionInformationList, inviteMember.id);
+            const auth = _inviteMemberUnionInfo?.auth!;
+            if (!_inviteMemberUnionInfo) {
+                await msg.sendMarkdown("102018808_1666627777", {
+                    union_name: `${inviteUnionInfo.name}`,
+                    invite_member: `<@${msg.author.id}>`,
+                    invited_member: `<@${inviteMember.id}>`,
+                    status: "确认中",
+                    invite_time: timeConver(msg.timestamp),
+                }, "102018808_1666629168").then(async (res) => {
+                    //log.debug(res);
+                    inviteUnionInfo.members.push({ uid: inviteMember.id, auth: "invited" });
+                    //await redis.hSet("inviteMember", inviteMember.id, "1");
+                    await redis.hSet(`union:${inviteUnionInfo.name}`, `member:${inviteMember.id}`, "invited");
+                });
+            } else if (auth == "invited") {
+                await msg.sendMsgEx({ content: `${inviteMember.username} 正在被邀请` });
+            } else {
+                await msg.sendMsgEx({ content: `${inviteMember.username} 已是${_inviteMemberUnionInfo.name}公会${auth == "master" ? '会长' : '成员'}` });
+            }
+        }
+        await sleep(500);
+    }
+}
+
+export async function inviteJoinUnionUser(msg: IMessageEx) {
+
+    const type = /(确认|拒绝)/.exec(msg.content)![1] == "确认" ? "acc" : "rej";
+    const unionInformationList = await getUnionInformationList();
+    const inviteUnionInfo = await findMemberInUnions(unionInformationList, msg.author.id);
+    var replayStr = ``;
+
+    if (!inviteUnionInfo || inviteUnionInfo.auth != "invited") {
+        replayStr = `<@${msg.author.id}>当前不存在公会邀请`;
+    } else if (type == "acc") {
+        await redis.hSet(`union:${inviteUnionInfo.name}`, `member:${msg.author.id}`, "member");
+        replayStr = `<@${msg.author.id}>已确认加入${inviteUnionInfo.name}公会`;
+    } else if (type == "rej") {
+        await redis.hDel(`union:${inviteUnionInfo.name}`, `member:${msg.author.id}`);
+        replayStr = `<@${msg.author.id}>已拒绝加入${inviteUnionInfo.name}公会`;
+    }
+    return msg.sendMsgEx({ content: replayStr });
 }
 
 function memberIsInUnion(uid: string, unionInfo: UnionListCell): boolean {
@@ -131,7 +169,7 @@ function memberIsInUnion(uid: string, unionInfo: UnionListCell): boolean {
     return false;
 }
 
-async function getUnionInformationList() {
+async function getUnionInformationList(): Promise<UnionList> {
     const unionKeys = await redis.keys(`union:*`);
     const unionList: UnionList = [];
     for (const unionKey of unionKeys)
@@ -139,35 +177,46 @@ async function getUnionInformationList() {
     return unionList;
 }
 
-async function getUnionInformationMeta(unionKeyName: string) {
-    const unionKey = unionKeyName;
+async function getUnionInformationMeta(unionKeyName: string): Promise<UnionListCell> {
 
     const members: UnionListMember[] = [];
-    const kv = await redis.hGetAll(unionKey);
+    const kv = await redis.hGetAll(unionKeyName);
     for (const key in kv) {
         //log.debug(key);
         const reg = /^member:(\d+)$/.exec(key);
         if (reg) members.push({
             uid: reg[1],
-            auth: kv[key],
+            auth: kv[key] as "master" | "member" | "invited",
         });
     }
     return {
-        name: unionKey.replace(/^union:/, ""),
+        name: unionKeyName.replace(/^union:/, ""),
         master: kv["master"],
+        integral: Number(kv["integral"]) || 0,
+        memberLimit: Number(kv["memberLimit"]) || 0,
         members,
-        integral: parseInt(kv["integral"] || "0"),
     }
+}
+
+function findMemberInUnions(unionInfos: UnionList, uid: string, auth?: string[]): Promise<(UnionListMember & UnionListCell) | null> {
+    return new Promise((resolve, reject) => {
+        for (const unionInfo of unionInfos)
+            for (const member of unionInfo.members)
+                if (member.uid == uid && (auth ? auth.includes(member.auth) : true))
+                    resolve(Object.assign(unionInfo, member));
+        resolve(null);
+    });
 }
 
 type UnionList = UnionListCell[];
 interface UnionListCell {
     name: string;
     master: string;
-    members: UnionListMember[];
     integral: number;
+    memberLimit: number;
+    members: UnionListMember[];
 }
 interface UnionListMember {
     uid: string;
-    auth: string;
+    auth: "master" | "member" | "invited";
 }

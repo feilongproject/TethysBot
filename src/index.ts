@@ -1,6 +1,6 @@
 import { init } from './init';
-import { debugAdmin } from './lib/common';
 import { findOpts } from './lib/findOpts';
+import { devAdmin } from './plugins/admin';
 import { IMessageEx } from './lib/IMessageEx';
 import config from '../config/config.json';
 
@@ -10,7 +10,7 @@ init().then(() => {
 
     global.ws.on('GUILD_MESSAGE_REACTIONS', async (data: IntentMessage) => {
         //log.debug(data.msg);
-        if (!debugAdmin(data.msg.user_id)) return;//开发环境专用
+        if (!devAdmin(data.msg.user_id)) return;//开发环境专用
 
         const guildId = data.msg.guild_id;
         const msgId = await global.redis.get(`identityMsgId:${guildId}`).catch(err => log.error(err));
@@ -56,22 +56,21 @@ init().then(() => {
     });
 
     global.ws.on('GUILD_MESSAGES', async (data: IntentMessage) => {
-        if (data.eventType != "MESSAGE_CREATE") return;
-        if (!debugAdmin(data.msg.author.id)) return;//开发环境专用
-
-        const msg = new IMessageEx(data.msg, "GUILD");// = data.msg as any;
-
-        global.redis.set("lastestMsgId", msg.id, { EX: 5 * 60 });
-        await global.redis.hSet("id->name", msg.author.id, msg.author.username);
-
         if (data.eventType == "MESSAGE_CREATE") {
+            if (!devAdmin(data.msg.author.id)) return;//开发环境专用
+
+            const msg = new IMessageEx(data.msg, "GUILD");// = data.msg as any;
+
+            global.redis.set("lastestMsgId", msg.id, { EX: 5 * 60 });
+            await global.redis.hSet("id->name", msg.author.id, msg.author.username);
+
             const opt = await findOpts(msg).catch(err => {
                 log.error(err);
             });
             //if (opt && msg.author.id != "7681074728704576201") opt.path = "err";//break test
             //log.debug(opt)//break test
             if (!opt || opt.path == "err") return;
-            log.debug(`./plugins/${opt.path}:${opt.fnc}`);
+            if (devEnv) log.debug(`./plugins/${opt.path}:${opt.fnc}`);
 
             try {
                 const plugin = await import(`./plugins/${opt.path}.ts`);
@@ -89,7 +88,7 @@ init().then(() => {
     });
 
     global.ws.on("DIRECT_MESSAGE", async (data: IntentMessage) => {
-        if (!debugAdmin(data.msg.author.id)) return;//开发环境专用
+        if (!devAdmin(data.msg.author.id)) return;//开发环境专用
 
         const msg = new IMessageEx(data.msg, "DIRECT");// = data.msg as any;
 
@@ -101,7 +100,7 @@ init().then(() => {
         });
         //if (opt) opt.path = "err";//break test
         if (!opt || opt.path == "err") return;
-        log.debug(`./plugins/${opt.path}:${opt.fnc}`);
+        if (devEnv) log.debug(`./plugins/${opt.path}:${opt.fnc}`);
 
         try {
             const plugin = await import(`./plugins/${opt.path}.ts`);
