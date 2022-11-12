@@ -152,7 +152,7 @@ export async function scoreboardSetAnswer(msg: IMessageEx) {
 
 //暂时无法使用
 export async function scoreboardChangeWithIdentity(msg: IMessageEx) {
-    const scReg = /^#(添加|扣除)(.+)身份组(\d+)(积分)?$/.exec(msg.content);
+    const scReg = /^(添加|扣除)(.+)身份组(\d+)(积分)?$/.exec(msg.content);
     const scOpt = scReg![1] == "添加" ? 1 : -1;
     const partId = scReg![2];
     const scScore = scReg![3];

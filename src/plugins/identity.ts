@@ -47,7 +47,7 @@ export async function warnWithReason(msg: IMessageEx) {
         msg.sendMsgEx({ content: `未指定@人员，无法操作！` });
         return true;
     }
-    const reg = msg.content.match(/^#警告(.+)\s?原因(.+)/)!;
+    const reg = msg.content.match(/^警告(.+)\s?原因(.+)/)!;
     const reason = reg[2];
 
     const someone = msg.mentions[msg.mentions[0].bot ? 1 : 0].id;

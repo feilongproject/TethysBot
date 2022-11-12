@@ -2,7 +2,7 @@ import { IMessageEx } from "../lib/IMessageEx";
 
 
 export async function getRandomNums(msg: IMessageEx) {
-    const reg = /^#获取随机数\s?(\d+)\s(\d+)\s(\d+)$/.exec(msg.content);
+    const reg = /^获取随机数\s?(\d+)\s(\d+)\s(\d+)$/.exec(msg.content);
     if (!reg) return true;
 
     const randoms: {
