@@ -49,7 +49,8 @@ export async function warnWithReason(msg: IMessageEx) {
     }
     const reg = msg.content.match(/^#警告(.+)\s?原因(.+)/)!;
     const reason = reg[2];
-    const someone = msg.mentions[0].id;
+
+    const someone = msg.mentions[msg.mentions[0].bot ? 1 : 0].id;
     const sendStr: string[] = [];
 
     global.redis.zRangeWithScores(`warn:uid:${someone}`, 0, -1).then(datas => {

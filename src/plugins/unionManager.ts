@@ -115,6 +115,7 @@ export async function inviteJoinUnion(msg: IMessageEx) {
     }
 
     for (const inviteMember of msg.mentions) {
+        if (inviteMember.bot) continue;
         if (inviteUnionInfo.members.length > inviteUnionInfo.memberLimit) {
             return msg.sendMsgEx({ content: `当前公会已满人` });
         } else {

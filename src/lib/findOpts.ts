@@ -5,7 +5,6 @@ export async function findOpts(msg: IMessageEx): Promise<{ path: string, fnc: st
     if (!msg.content) return { path: "err", fnc: "err" };
     //const optStr = msg.content.trim().split(" ")[0];
 
-    const content = msg.content.replace(new RegExp(`<@!${meId}>`), ``).trim();
     const fnc: {
         [mainKey: string]: {
             [key: string]: {
@@ -22,7 +21,7 @@ export async function findOpts(msg: IMessageEx): Promise<{ path: string, fnc: st
         for (const key in fnc[mainKey]) {
             const opt = fnc[mainKey][key];
             if (!opt.type.includes(msg.messageType)) continue;
-            if (!RegExp(opt.reg).test(content)) continue;
+            if (!RegExp(opt.reg).test(msg.content)) continue;
             if (opt.permission != "anyone") {
                 if (msg.messageType == "GUILD"
                     && !await isAdmin(msg.author.id, msg.member)

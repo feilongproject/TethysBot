@@ -64,6 +64,7 @@ init().then(() => {
             global.redis.set("lastestMsgId", msg.id, { EX: 5 * 60 });
             await global.redis.hSet("id->name", msg.author.id, msg.author.username);
 
+            msg.content = msg.content.replace(new RegExp(`<@!${meId}>`), ``).trim().replace(/^\//, "");
             const opt = await findOpts(msg).catch(err => {
                 log.error(err);
             });

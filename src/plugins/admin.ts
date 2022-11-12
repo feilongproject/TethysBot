@@ -7,6 +7,7 @@ export async function addAdmin(msg: IMessageEx) {
     if (!msg.mentions) return msg.sendMsgEx({ content: `未指定用户` });
     const sendStr: string[] = [`已对下列用户添加管理权限`];
     for (const member of msg.mentions) {
+        if (member.bot) continue;
         await redis.hSet("auth", member.id, "admin");
         sendStr.push(`${await idToName(member.id)}`);
     }

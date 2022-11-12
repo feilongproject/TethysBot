@@ -116,8 +116,8 @@ export async function scoreboardChange(msg: IMessageEx) {
     const sendStr: string[] = [`已为以下用户${scReg[1]}${boardName}${scScore}点`];
     const queue: Promise<number>[] = [];
     for (const user of msg.mentions) {
-        await global.redis.hSet("id->name", user.id, user.username);
         if (user.bot) continue;
+        await global.redis.hSet("id->name", user.id, user.username);
         sendStr.push(`${user.username}`);
         queue.push(global.redis.zIncrBy(`scoreboard:${boardName}`, scScore, user.id));
     }
