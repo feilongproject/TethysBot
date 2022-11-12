@@ -15,6 +15,7 @@ export async function addAdmin(msg: IMessageEx) {
 }
 
 export async function testShell(msg: IMessageEx) {
+    if (!adminId.includes(msg.author.id)) return;
     const code = /^运行命令(.*)/.exec(msg.content)![1];
     try {
         //log.debug(execSync(code).toString());
