@@ -5,6 +5,12 @@
             "fnc": "addAdmin",
             "type": ["GUILD"],
             "describe": "对指定用户添加权限"
+        },
+        "testShell": {
+            "reg": "^运行命令(.*)",
+            "fnc": "testShell",
+            "type": ["GUILD", "DIRECT"],
+            "describe": "测试shell功能"
         }
     },
     "identity": {

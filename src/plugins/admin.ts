@@ -1,7 +1,7 @@
 import { IMember } from "qq-guild-bot";
 import { idToName } from "../lib/common";
 import { IMessageEx } from "../lib/IMessageEx";
-
+import { execSync } from "child_process";
 
 export async function addAdmin(msg: IMessageEx) {
     if (!msg.mentions) return msg.sendMsgEx({ content: `未指定用户` });
@@ -12,6 +12,19 @@ export async function addAdmin(msg: IMessageEx) {
         sendStr.push(`${await idToName(member.id)}`);
     }
     return msg.sendMsgEx({ content: sendStr.join("\n") });
+}
+
+export async function testShell(msg: IMessageEx) {
+    const code = /^运行命令(.*)/.exec(msg.content)![1];
+    try {
+        //log.debug(execSync(code).toString());
+        msg.sendMsgEx({ content: execSync(code).toString().replaceAll(".", ". "), }).catch(err => {
+            //log.error(err);
+        });
+    } catch (error) {
+        msg.sendMsgEx({ content: (error as any).toString().replaceAll(".", ". "), });
+    }
+
 }
 
 export async function isAdmin(uid: string, iMember?: IMember): Promise<boolean> {
