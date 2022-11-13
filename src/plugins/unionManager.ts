@@ -4,6 +4,9 @@ import { idToName, sleep, timeConver } from "../lib/common";
 
 
 export async function createUnion(msg: IMessageEx) {
+    if (!msg.member) return;
+    if (!(await isAdmin(msg.author.id) || msg.member.roles.includes("12597148"))) return;
+
     const unionName = (msg.content.match(/创建公会(.+)/) || [])[1].trim();
     if (!unionName) {
         return msg.sendMsgEx({ content: `公会名称为空` });

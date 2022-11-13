@@ -11,7 +11,7 @@ export class IMessageEx {
     content: string;
     guild_id: string;
     id: string;
-    member: IMember;
+    member?: IMember;
     message_reference?: { message_id: string };
     seq?: number;
     seq_in_channel?: string;
