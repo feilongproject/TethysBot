@@ -89,6 +89,7 @@ init().then(() => {
     });
 
     global.ws.on("DIRECT_MESSAGE", async (data: IntentMessage) => {
+        if (!data.msg.author) return;
         if (!devAdmin(data.msg.author.id)) return;//开发环境专用
 
         const msg = new IMessageEx(data.msg, "DIRECT");// = data.msg as any;
