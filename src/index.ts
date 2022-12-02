@@ -1,4 +1,4 @@
-import { init } from './init';
+import { init, loadGuildTree } from './init';
 import { findOpts } from './lib/findOpts';
 import { devAdmin } from './plugins/admin';
 import { IMessageEx } from './lib/IMessageEx';
@@ -55,72 +55,59 @@ init().then(() => {
         }
     });
 
-    global.ws.on('GUILD_MESSAGES', async (data: IntentMessage) => {
-        if (data.eventType == "MESSAGE_CREATE") {
-            if (!devAdmin(data.msg.author.id)) return;//开发环境专用
+    global.ws.on('GUILD_MESSAGES', wsIntentMessage);
+    global.ws.on("DIRECT_MESSAGE", wsIntentMessage);
 
-            const msg = new IMessageEx(data.msg, "GUILD");// = data.msg as any;
-
-            global.redis.set("lastestMsgId", msg.id, { EX: 5 * 60 });
-            await global.redis.hSet("id->name", msg.author.id, msg.author.username);
-
-            msg.content = msg.content.replace(new RegExp(`<@!${meId}>`), ``).trim().replace(/^\//, "");
-            const opt = await findOpts(msg).catch(err => {
-                log.error(err);
-            });
-            //if (opt && msg.author.id != "7681074728704576201") opt.path = "err";//break test
-            //log.debug(opt)//break test
-            if (!opt || opt.path == "err") return;
-            if (devEnv) log.debug(`./plugins/${opt.path}:${opt.fnc}`);
-
-            try {
-                const plugin = await import(`./plugins/${opt.path}.ts`);
-                if (typeof plugin[opt.fnc] == "function") {
-                    (plugin[opt.fnc] as PluginFnc)(msg).catch(err => {
-                        log.error(err);
-                    });
-                } else {
-                    log.error(`not found function ${opt.fnc}() at "${global._path}/src/plugins/${opt.path}.ts"`);
-                }
-            } catch (err) {
-                log.error(err);
-            }
-        }
-    });
-
-    global.ws.on("DIRECT_MESSAGE", async (data: IntentMessage) => {
-        if (!data.msg.author) return;
-        if (!devAdmin(data.msg.author.id)) return;//开发环境专用
-
-        const msg = new IMessageEx(data.msg, "DIRECT");// = data.msg as any;
-
-        global.redis.set("lastestMsgId", msg.id, { EX: 5 * 60 });
-        await global.redis.hSet("id->name", msg.author.id, msg.author.username);
-
-        const opt = await findOpts(msg).catch(err => {
-            log.error(err);
+    global.ws.on("GUILDS", () => {
+        log.mark(`重新加载频道树中`);
+        loadGuildTree().then(() => {
+            log.mark(`频道树加载完毕`);
+        }).catch(err => {
+            log.error(`频道树加载失败`, err);
         });
-        //if (opt) opt.path = "err";//break test
-        if (!opt || opt.path == "err") return;
-        if (devEnv) log.debug(`./plugins/${opt.path}:${opt.fnc}`);
-
-        try {
-            const plugin = await import(`./plugins/${opt.path}.ts`);
-            if (typeof plugin[opt.fnc] == "function") {
-                (plugin[opt.fnc] as PluginFnc)(msg).catch(err => {
-                    log.error(err);
-                });
-            } else {
-                log.error(`not found function ${opt.fnc}() at "${global._path}/src/plugins/${opt.path}.ts"`);
-            }
-        } catch (err) {
-            log.error(err);
-        }
-
     });
-
 }).catch(err => {
     console.error(err);
 });
+
+async function execute(msg: IMessageEx) {
+    try {
+        await global.redis.set("lastestMsgId", msg.id, { EX: 4 * 60 });
+        await global.redis.hSet("id->name", msg.author.id, msg.author.username);
+        const opt = await findOpts(msg).catch(err => {
+            log.error(err);
+        });
+        if (!opt || opt.path == "err") return;
+        if (devEnv) log.debug(`./plugins/${opt.path}:${opt.fnc}`);
+        const plugin = await import(`./plugins/${opt.path}.ts`);
+        if (typeof plugin[opt.fnc] == "function") {
+            (plugin[opt.fnc] as PluginFnc)(msg).catch(err => {
+                log.error(err);
+            });
+        } else log.error(`not found function ${opt.fnc}() at "${global._path}/src/plugins/${opt.path}.ts"`);
+    } catch (err) {
+        log.error(err);
+    }
+}
+
+async function wsIntentMessage(data: IntentMessage) {
+    try {
+        var msg: IMessageEx | null = null;
+        if (!data.msg || !data.msg.author) return;
+        if (!devAdmin(data.msg.author.id)) return;//开发环境专用
+
+        if (data.eventType == "MESSAGE_CREATE") {
+            msg = new IMessageEx(data.msg, "GUILD");
+            msg.content = msg.content.replace(new RegExp(`<@!${meId}>`), ``).trim().replace(/^\//, "");
+        } else if (data.eventType == "DIRECT_MESSAGE_CREATE") {
+            msg = new IMessageEx(data.msg, "DIRECT");
+        }
+        if (msg) execute(msg);
+    } catch (err) {
+        log.error(err);
+    }
+
+}
+
 
 type PluginFnc = (msg: IMessageEx) => Promise<any>

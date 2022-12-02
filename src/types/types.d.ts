@@ -28,7 +28,9 @@ declare global {
         "GUILD_MEMBER_REMOVE" |
         "GUILD_MEMBER_ADD" |
         "GUILD_MEMBER_UPDATE" |
-        "MESSAGE_DELETE",
+        "MESSAGE_DELETE" |
+        "DIRECT_MESSAGE_CREATE" |
+        "DIRECT_MESSAGE_DELETE",
         eventId: string,
         msg: IMessage & GUILD_MEMBER & MESSAGE_REACTION_ADD,
     }

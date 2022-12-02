@@ -55,40 +55,13 @@ export async function init() {
 
     log.info(`初始化：正在创建频道树`);
     global.saveGuildsTree = [];
-    client.meApi.meGuilds().then(guilds => {
-        for (const guild of guilds.data) {
-            log.info(`${guild.name}(${guild.id})`);
-            setIdentityGroup(guild.id);
-            var _guild: SaveChannel[] = [];
-            global.client.channelApi.channels(guild.id).then(channels => {
-                for (const channel of channels.data) {
-                    if (channel.name != "") {
-                        log.info(`${guild.name}(${guild.id})-${channel.name}(${channel.id})-father:${channel.parent_id}`);
-                    }
-                    _guild.push({ name: channel.name, id: channel.id });
-                }
-                global.saveGuildsTree.push({ name: guild.name, id: guild.id, channel: _guild });
-            }).catch(err => {
-                log.error(err);
-            });
-        }
-    }).catch(err => {
-        log.error(err);
-    });
+    await loadGuildTree();
 
     global.client.meApi.me().then(res => {
         global.meId = res.data.id;
     });
 
     redis.hSet("scoreboardList", "积分", 1);
-    /* setInterval(() => {
-        log.debug("##########重新建立链接中##########");
-        global.ws.disconnect();
-    }, 1000 * 10);
-    setTimeout(() => {
-        log.debug("##########重新建立链接中##########");
-        global.ws.disconnect();
-    }, 1000 * 10); */
 }
 
 
@@ -106,6 +79,22 @@ function setIdentityGroup(guildId: string) {
     }).catch(err => {
         log.error(err);
     });
+}
 
-
+export async function loadGuildTree(init = false) {
+    global.saveGuildsTree = [];
+    for (const guild of (await global.client.meApi.meGuilds()).data) {
+        if (init) log.mark(`${guild.name}(${guild.id})`);
+        setIdentityGroup(guild.id);
+        var _guild: SaveChannel[] = [];
+        const channels = await global.client.channelApi.channels(guild.id).catch(err => {
+            log.error(err);
+            throw err;
+        });
+        for (const channel of channels?.data) {
+            if (init) log.mark(`${guild.name}(${guild.id})-${channel.name}(${channel.id})-father:${channel.parent_id}`);
+            _guild.push({ name: channel.name, id: channel.id });
+        }
+        global.saveGuildsTree.push({ name: guild.name, id: guild.id, channel: _guild });
+    }
 }
