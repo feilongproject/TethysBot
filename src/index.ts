@@ -18,8 +18,7 @@ init().then(() => {
         if (data.msg.target.id != msgId) return;
 
         const allData = await global.redis.hGetAll(`emojiIdentity:${guildId}`).catch(err => {
-            log.error(err);
-            return null;
+            return log.error(err);
         });
         if (!allData) return;
 

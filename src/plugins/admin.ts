@@ -39,9 +39,6 @@ export async function isAdmin(uid: string, iMember?: IMember): Promise<boolean> 
 }
 
 export function devAdmin(uid: string): boolean {
-    if (devEnv) {
-        if (adminId.includes(uid)) return true;
-        else return false;
-    }
-    return true;
+    if (devEnv && adminId.includes(uid)) return true;
+    return devEnv ? false : true;
 }

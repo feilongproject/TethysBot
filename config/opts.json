@@ -149,12 +149,19 @@
             "permission": "anyone",
             "describe": "（会长）邀请某人加入发送者所在公会"
         },
-        "inviteJoinUnionUser": {
+        "processInviteJoinUnion": {
             "reg": "^(确认|拒绝)加入$",
-            "fnc": "inviteJoinUnionUser",
+            "fnc": "processInviteJoinUnion",
             "type": ["GUILD"],
             "permission": "anyone",
             "describe": "被邀请者可以确认/拒绝公会邀请"
+        },
+        "removeUnionMember": {
+            "reg": "^移除成员",
+            "fnc": "removeUnionMember",
+            "type": ["GUILD"],
+            "permission": "anyone",
+            "describe": "（会长）移除公会成员"
         }
     }
 }

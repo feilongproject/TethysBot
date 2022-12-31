@@ -5,7 +5,7 @@ import { idToName, sleep, timeConver } from "../lib/common";
 
 export async function createUnion(msg: IMessageEx) {
     if (!msg.member) return;
-    if (!(await isAdmin(msg.author.id) || msg.member.roles.includes("12597148"))) return;
+    if (!(devEnv || msg.member.roles.includes("12597148"))) return;
 
     const unionName = (msg.content.match(/创建公会(.+)/) || [])[1].trim();
     if (!unionName) {
@@ -147,7 +147,7 @@ export async function inviteJoinUnion(msg: IMessageEx) {
     }
 }
 
-export async function inviteJoinUnionUser(msg: IMessageEx) {
+export async function processInviteJoinUnion(msg: IMessageEx) {
 
     const type = /(确认|拒绝)/.exec(msg.content)![1] == "确认" ? "acc" : "rej";
     const unionInformationList = await getUnionInformationList();
@@ -164,6 +164,22 @@ export async function inviteJoinUnionUser(msg: IMessageEx) {
         replayStr = `<@${msg.author.id}>已拒绝加入${inviteUnionInfo.name}公会`;
     }
     return msg.sendMsgEx({ content: replayStr });
+}
+
+export async function removeUnionMember(msg: IMessageEx) {
+    if (!msg.mentions) return msg.sendMsgEx({ content: `未指定移除用户` });
+    const unionInformationList = await getUnionInformationList();
+    const masterUnionInfo = await findMemberInUnions(unionInformationList, msg.author.id);
+
+    if (!masterUnionInfo) return msg.sendMsgEx({ content: `您还没有公会，请先创建公会` });
+    else if (masterUnionInfo.auth != "master") return msg.sendMsgEx({ content: `您还不是${masterUnionInfo.name}公会会长，不可移除他人` });
+
+    for (const removeMember of msg.mentions) {
+        if (removeMember.bot) continue;
+        await redis.hDel(`union:${masterUnionInfo.name}`, `member:${removeMember.id}`).then(() => {
+            return msg.sendMsgEx({ content: `已从${masterUnionInfo.name}公会移除成员${removeMember.username}` });
+        });
+    }
 }
 
 function memberIsInUnion(uid: string, unionInfo: UnionListCell): boolean {
