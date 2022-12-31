@@ -102,26 +102,27 @@ export async function scoreboardCreate(msg: IMessageEx) {
 }
 
 export async function scoreboardChange(msg: IMessageEx) {
-    const scReg = /^(添加|扣除)\s*(<@!?\d+>\s*)+(\d+)(.+)$/.exec(msg.content)!;
+    const scReg = /^(添加|扣除)\s*((<@!?\d+>\s*|\d+\s*)+)\s(\d+)(.+)$/.exec(msg.content)!;
     const scOpt = scReg[1] == "添加" ? 1 : -1;
-    const scScore = Number(scReg[3]) * scOpt;
-    const boardName = scReg[4];
+    const scMembers = scReg[2].split(/<@!?(?!=\d+)|>?\s+|>/);
+    const scScore = Number(scReg[4]) * scOpt;
+    const boardName = scReg[5];
 
     if (!await redis.hExists(`scoreboardList`, boardName))
-        return msg.sendMsgEx({
-            content: `未找到指定榜单`,
-        });
-    if (!msg.mentions || msg.mentions.length == 0) return msg.sendMsgEx({ content: `未指定@人员，无法操作！` });
+        return msg.sendMsgEx({ content: `未找到指定榜单` });
+    if (!scMembers || scMembers.length == 0)
+        return msg.sendMsgEx({ content: `未指定人员，无法操作！` });
 
     const sendStr: string[] = [`已为以下用户${scReg[1]}${boardName}${scScore}点`];
     const queue: Promise<number>[] = [];
-    for (const user of msg.mentions) {
-        if (user.bot) continue;
-        await global.redis.hSet("id->name", user.id, user.username);
-        sendStr.push(`${user.username}`);
-        queue.push(global.redis.zIncrBy(`scoreboard:${boardName}`, scScore, user.id));
+    for (const tN of (msg.mentions || [])) await redis.hSet("id->name", tN.id, tN.username);
+    for (var _member of scMembers) {
+        _member = _member.trim();
+        if (!/^\d+$/.test(_member)) continue;
+        sendStr.push(await redis.hGet("id->name", _member) || _member);
+        queue.push(redis.zIncrBy(`scoreboard:${boardName}`, scScore, _member));
     }
-    Promise.all(queue).then(() => {
+    return Promise.all(queue).then(() => {
         msg.sendMsgEx({ content: sendStr.join("\n") });
     });
 }

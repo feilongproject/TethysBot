@@ -71,19 +71,18 @@ init().then(() => {
 
 async function execute(msg: IMessageEx) {
     try {
-        await global.redis.set("lastestMsgId", msg.id, { EX: 4 * 60 });
-        await global.redis.hSet("id->name", msg.author.id, msg.author.username);
-        const opt = await findOpts(msg).catch(err => {
-            log.error(err);
-        });
-        if (!opt || opt.path == "err") return;
+        await redis.set("lastestMsgId", msg.id, { EX: 4 * 60 });
+        await redis.hSet("id->name", msg.author.id, msg.author.username);
+
+        const opt = await findOpts(msg).catch(err => { log.error(err); });
+        if (!opt) return;
         if (devEnv) log.debug(`./plugins/${opt.path}:${opt.fnc}`);
         const plugin = await import(`./plugins/${opt.path}.ts`);
         if (typeof plugin[opt.fnc] == "function") {
             (plugin[opt.fnc] as PluginFnc)(msg).catch(err => {
                 log.error(err);
             });
-        } else log.error(`not found function ${opt.fnc}() at "${global._path}/src/plugins/${opt.path}.ts"`);
+        } else log.error(`not found function ${opt.fnc}() at "${_path}/src/plugins/${opt.path}.ts"`);
     } catch (err) {
         log.error(err);
     }
@@ -101,7 +100,7 @@ async function wsIntentMessage(data: IntentMessage) {
         } else if (data.eventType == "DIRECT_MESSAGE_CREATE") {
             msg = new IMessageEx(data.msg, "DIRECT");
         }
-        if (msg) execute(msg);
+        if (msg) return execute(msg);
     } catch (err) {
         log.error(err);
     }

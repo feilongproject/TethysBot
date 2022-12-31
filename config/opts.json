@@ -89,7 +89,7 @@
             "describe": "（管理员）添加或删除指定榜单"
         },
         "scoreboardChange": {
-            "reg": "^(添加|扣除)\\s*(<@!?\\d+>\\s*)+(\\d+)(.+)$",
+            "reg": "^(添加|扣除)\\s*((<@!?\\d+>\\s*|\\d+\\s*)+)\\s(\\d+)(.+)$",
             "fnc": "scoreboardChange",
             "type": ["GUILD"],
             "describe": "（管理员）操作某人指定榜单的积分"

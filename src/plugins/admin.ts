@@ -19,11 +19,11 @@ export async function testShell(msg: IMessageEx) {
     const code = /^运行命令(.*)/.exec(msg.content)![1];
     try {
         //log.debug(execSync(code).toString());
-        msg.sendMsgEx({ content: execSync(code).toString().replaceAll(".", ". "), }).catch(err => {
+        return msg.sendMsgEx({ content: execSync(code).toString().replaceAll(".", ". ") }).catch(err => {
             //log.error(err);
         });
     } catch (error) {
-        msg.sendMsgEx({ content: (error as any).toString().replaceAll(".", ". "), });
+        return msg.sendMsgEx({ content: (error as any).toString().replaceAll(".", ". ") });
     }
 
 }
