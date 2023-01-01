@@ -5,8 +5,9 @@
     "main": "src/index.ts",
     "scripts": {
         "dev": "clear && nodemon",
-        "build": "./node_modules/.bin/tsc -p ./tsconfig.json",
-        "start": "ts-node src/index.ts"
+        "dev:web": "clear && nodemon --config nodemon-web.json",
+        "start": "ts-node src/index.ts",
+        "start:web": "ts-node src/web/index.ts"
     },
     "keywords": [],
     "author": "feilongproject",
