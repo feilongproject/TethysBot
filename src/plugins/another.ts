@@ -46,7 +46,7 @@ export async function getRandomNums(msg: IMessageEx) {
 
 export async function getUID(msg: IMessageEx) {
     const aid = msg.mentions ? msg.mentions[0] : msg.author;
-    msg.sendMsgEx({
+    return msg.sendMsgEx({
         content: `用户名称: ${aid.username}` +
             `\n用户ID: ${aid.id}`
     });

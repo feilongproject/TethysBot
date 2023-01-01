@@ -61,80 +61,95 @@ export class IMessageEx {
     }
 
     async sendMsgEx(option: SendMsgOption) {
-        const { ref, imagePath, content, embed } = option;
-        const { id, guild_id, channel_id } = this;
-        if (imagePath) {
-            var pushUrl =
-                this.messageType == "DIRECT" ?
-                    `https://api.sgroup.qq.com/dms/${guild_id}/messages` :
-                    `https://api.sgroup.qq.com/channels/${channel_id}/messages`;
-            const formdata = new FormData();
-            formdata.append("msg_id", id);
-            if (content) formdata.append("content", content);
-            formdata.append("file_image", fs.createReadStream(imagePath));
-            return fetch(pushUrl, {
-                method: "POST",
-                headers: {
-                    "Content-Type": formdata.getHeaders()["content-type"],
-                    "Authorization": `Bot ${config.initConfig.appID}.${config.initConfig.token}`,
-                }, body: formdata
-            }).then(res => { return res.json(); }).then(body => {
-                if (body.code) log.error(body);
-                return body;
-            }).catch(error => {
-                log.error(error);
-            });
-        } else {
-            if (this.messageType == "GUILD") {
-                return global.client.messageApi.postMessage(channel_id, {
-                    content: content,
-                    msg_id: id,
-                    message_reference: ref ? { message_id: id, } : undefined,
-                    embed,
-                });
-            } else {
-                return global.client.directMessageApi.postDirectMessage(guild_id, {
-                    msg_id: id,
-                    content: content,
-                    embed,
-                });
-            }
-        }
+        return sendMsgEx(option, this);
     }
 
     async sendMarkdown(templateId: string, _params?: { [key: string]: string }, keyboardId?: string) {
-        const params: { key: string; values: [string]; }[] = [];
-        for (const key in _params) params.push({ key, values: [_params[key]] });
-        return fetch(`https://api.sgroup.qq.com/channels/${this.channel_id}/messages`, {
+        sendMarkdown(this.channel_id, templateId, _params, keyboardId);
+    }
+}
+
+export async function sendMsgEx(option: SendMsgOption, msg?: IMessageEx) {
+    log.debug(option);
+    const { ref, imagePath, content, embed } = option;
+    const msgId = option.msgId || msg?.id;
+    const guildId = option.guildId || msg?.guild_id;
+    const channelId = option.channelId || msg?.channel_id;
+    const sendType = option.sendType || msg?.messageType;
+
+    if (imagePath) {
+        var pushUrl =
+            sendType == "DIRECT" ?
+                `https://api.sgroup.qq.com/dms/${guildId}/messages` :
+                `https://api.sgroup.qq.com/channels/${channelId}/messages`;
+        const formdata = new FormData();
+        formdata.append("msg_id", msgId);
+        if (content) formdata.append("content", content);
+        formdata.append("file_image", fs.createReadStream(imagePath));
+        return fetch(pushUrl, {
             method: "POST",
             headers: {
-                "Content-Type": "application/json",
+                "Content-Type": formdata.getHeaders()["content-type"],
                 "Authorization": `Bot ${config.initConfig.appID}.${config.initConfig.token}`,
-            }, body: JSON.stringify({
-                markdown: {
-                    custom_template_id: templateId,
-                    params: params,
-                },
-                keyboard: {
-                    id: keyboardId,
-                },
-            }),
-        }).then(res => {
-            return res.json();
-        }).catch(err => {
-            log.error(err);
+            }, body: formdata
+        }).then(res => { return res.json(); }).then(body => {
+            if (body.code) log.error(body);
+            return body;
+        }).catch(error => {
+            log.error(error);
+        });
+    } else {
+        if (sendType == "GUILD") return global.client.messageApi.postMessage(channelId!, {
+            content: content,
+            msg_id: msgId,
+            message_reference: (ref && msgId) ? { message_id: msgId, } : undefined,
+            embed,
+        });
+        else return global.client.directMessageApi.postDirectMessage(guildId!, {
+            msg_id: msgId,
+            content: content,
+            embed,
         });
     }
 }
 
+export async function sendMarkdown(channelId: string, templateId: string, _params?: { [key: string]: string }, keyboardId?: string) {
+    const params: { key: string; values: [string]; }[] = [];
+    for (const key in _params) params.push({ key, values: [_params[key]] });
+    return fetch(`https://api.sgroup.qq.com/channels/${channelId}/messages`, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bot ${config.initConfig.appID}.${config.initConfig.token}`,
+        }, body: JSON.stringify({
+            markdown: {
+                custom_template_id: templateId,
+                params: params,
+            },
+            keyboard: {
+                id: keyboardId,
+            },
+        }),
+    }).then(res => {
+        return res.json();
+    }).catch(err => {
+        log.error(err);
+    });
+}
 
 interface IMessageDIRECT {
     src_guild_id?: string;
 }
 
 interface SendMsgOption {
-    ref?: boolean,
-    imagePath?: string,
-    content?: string,
+    ref?: boolean;
+    imagePath?: string;
+    imageUrl?: string;
+    content?: string;
     embed?: Embed,
+    initiative?: boolean;
+    sendType?: "DIRECT" | "GUILD";
+    msgId?: string;
+    guildId?: string;
+    channelId?: string;
 }

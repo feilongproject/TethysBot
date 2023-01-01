@@ -38,10 +38,7 @@ export async function init() {
     }
 
     log.info(`初始化：正在连接数据库`);
-    global.redis = createClient({
-        socket: { host: "127.0.0.1", port: 6379 },
-        database: 2,
-    });
+    global.redis = createClient(config.redisConfig);
     await global.redis.connect().then(() => {
         log.info(`初始化：redis数据库连接成功`);
     }).catch(err => {
@@ -55,7 +52,7 @@ export async function init() {
 
     log.info(`初始化：正在创建频道树`);
     global.saveGuildsTree = [];
-    await loadGuildTree();
+    await loadGuildTree(true);
 
     global.client.meApi.me().then(res => {
         global.meId = res.data.id;
@@ -81,11 +78,11 @@ function setIdentityGroup(guildId: string) {
     });
 }
 
-export async function loadGuildTree(init = false) {
+export async function loadGuildTree(init = false, setIdentity = true) {
     global.saveGuildsTree = [];
     for (const guild of (await global.client.meApi.meGuilds()).data) {
         if (init) log.mark(`${guild.name}(${guild.id})`);
-        setIdentityGroup(guild.id);
+        if (setIdentity) setIdentityGroup(guild.id);
         var _guild: SaveChannel[] = [];
         const channels = await global.client.channelApi.channels(guild.id).catch(err => {
             log.error(err);
@@ -93,7 +90,7 @@ export async function loadGuildTree(init = false) {
         });
         for (const channel of channels?.data) {
             if (init) log.mark(`${guild.name}(${guild.id})-${channel.name}(${channel.id})-father:${channel.parent_id}`);
-            _guild.push({ name: channel.name, id: channel.id });
+            _guild.push(channel);
         }
         global.saveGuildsTree.push({ name: guild.name, id: guild.id, channel: _guild });
     }
