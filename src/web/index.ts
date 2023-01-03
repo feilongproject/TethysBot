@@ -9,7 +9,10 @@ global._path = process.cwd();
 global.client = createOpenAPI(config.initConfig);
 setDevLog();
 
-const wss = new WebSocket.Server({ port: 3000 });
+const PORT = 8848;
+const wss = new WebSocket.Server({ port: PORT });
+
+log.info(`网页后端已启动, 端口${PORT}`);
 wss.on('connection', (ws, req) => {
     log.info(`新连接被开启`);
     if (ws.protocol != config.wsToken) ws.close(1002, "Token错误");
