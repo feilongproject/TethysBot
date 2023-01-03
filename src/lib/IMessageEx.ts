@@ -27,7 +27,7 @@ export class IMessageEx {
         //log.debug(msg);
         this.author = msg.author;
         this.channel_id = msg.channel_id;
-        this.content = msg.content ? msg.content.trim() : `null msg content ${new Date().getTime()}`;
+        this.content = msg.content || "";
         this.guild_id = msg.guild_id;
         this.id = msg.id;
         this.member = msg.member;
@@ -41,7 +41,7 @@ export class IMessageEx {
         this.messageType = messageType;
 
         if (messageType == "DIRECT") {
-            log.info(`私信{${msg.guild_id}}[${msg.channel_id}](${msg.author.username}):${msg.content}`);
+            log.info(`私信{${this.guild_id}}[${this.channel_id}](${this.author.username}):${this.content}`);
             return;
         }
 
@@ -57,7 +57,7 @@ export class IMessageEx {
                 }
             }
         }
-        log.warn(`unKnown message:{${msg.guild_id}}[${msg.channel_id}](${msg.author.username}):${msg.content}`);
+        log.warn(`unKnown message:{${this.guild_id}}[${this.channel_id}](${this.author.username}):${this.content}`);
     }
 
     async sendMsgEx(option: SendMsgOption) {

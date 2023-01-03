@@ -16,10 +16,10 @@ export async function addAdmin(msg: IMessageEx) {
 
 export async function testShell(msg: IMessageEx) {
     if (!adminId.includes(msg.author.id)) return;
-    const code = /^运行命令(.*)/.exec(msg.content)![1];
+    const code = /^运行命令(.*)$/.exec(msg.content)![1];
     try {
-        //log.debug(execSync(code).toString());
-        return msg.sendMsgEx({ content: execSync(code.replaceAll(" . ", ".")).toString().replaceAll(".", ". ") }).catch(err => {
+        log.debug(code.replaceAll("。", "."));
+        return msg.sendMsgEx({ content: execSync(code.replaceAll("。", ".")).toString().replaceAll(".", "。") }).catch(err => {
             //log.error(err);
         });
     } catch (error) {
@@ -31,7 +31,7 @@ export async function testShell(msg: IMessageEx) {
 export async function isAdmin(uid: string, iMember?: IMember): Promise<boolean> {
     if (adminId.includes(uid)) return true;
     if (iMember && (iMember.roles.includes("2") || iMember.roles.includes("4"))) return true;
-    return await redis.hGet("auth", uid).then(auth => {
+    return redis.hGet("auth", uid).then(auth => {
         if (auth == "admin") return true;
         return false;
     });
