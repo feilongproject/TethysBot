@@ -50,6 +50,7 @@
             "reg": "^(获取)?(.*)?UID$",
             "fnc": "getUID",
             "type": ["GUILD", "DIRECT"],
+            "permission": "anyone",
             "describe": "获取当前用户或指定用户UID"
         }
     },
