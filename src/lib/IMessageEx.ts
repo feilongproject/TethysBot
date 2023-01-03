@@ -70,7 +70,7 @@ export class IMessageEx {
 }
 
 export async function sendMsgEx(option: SendMsgOption, msg?: IMessageEx) {
-    log.debug(option);
+    //log.debug(option);
     const { ref, imagePath, content, embed } = option;
     const msgId = option.msgId || msg?.id;
     const guildId = option.guildId || msg?.guild_id;
