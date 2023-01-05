@@ -1,7 +1,7 @@
 import fs from "fs";
 import { createClient } from 'redis';
 import { createOpenAPI, createWebsocket } from 'qq-guild-bot';
-import _log, { setDevLog } from './lib/logger';
+import _log from './lib/logger';
 import config from '../config/config.json';
 
 export async function init() {
@@ -12,9 +12,8 @@ export async function init() {
     global.emojiIdentity = {};
 
     if (process.argv.includes("--dev")) {
-        log.mark("当前环境处于开发环境，请注意！");
         global.devEnv = true;
-        setDevLog();
+        log.mark("当前环境处于开发环境，请注意！");
     } else global.devEnv = false;
 
     if (global.devEnv) {

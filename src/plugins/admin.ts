@@ -2,6 +2,24 @@ import { IMember } from "qq-guild-bot";
 import { idToName } from "../lib/common";
 import { IMessageEx } from "../lib/IMessageEx";
 import { execSync } from "child_process";
+import { readFileSync } from "fs";
+
+export async function version(msg: IMessageEx) {
+    if (!adminId.includes(msg.author.id)) return;
+
+    var packVer = ``;
+    try { packVer = JSON.parse(readFileSync("package.json").toString()).version; }
+    catch (error) { packVer = "未成功获取"; }
+
+    var gitVer = ``;
+    try { gitVer = execSync("git rev-parse HEAD").toString(); }
+    catch (error) { gitVer = `未成功获取`; }
+
+    return msg.sendMsgEx({
+        content: `package版本号: ${packVer}` +
+            `\ngit版本号: ${gitVer}`
+    });
+}
 
 export async function addAdmin(msg: IMessageEx) {
     if (!msg.mentions) return msg.sendMsgEx({ content: `未指定用户` });

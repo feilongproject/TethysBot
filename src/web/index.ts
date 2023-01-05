@@ -1,13 +1,12 @@
 import WebSocket from "ws";
 import { createOpenAPI } from "qq-guild-bot";
 import config from '../../config/config.json';
-import _log, { setDevLog } from '../lib/logger';
+import _log from '../lib/logger';
 
 
 global.log = _log;
 global._path = process.cwd();
 global.client = createOpenAPI(config.initConfig);
-setDevLog();
 
 const PORT = 8848;
 const wss = new WebSocket.Server({ port: PORT });
