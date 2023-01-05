@@ -170,5 +170,21 @@
             "permission": "anyone",
             "describe": "（会长）移除公会成员"
         }
+    },
+    "keyword": {
+        "setKeyword": {
+            "reg": "^(设置|提交)(精确|模糊)关键词(.*)$",
+            "fnc": "setKeyword",
+            "type": ["GUILD", "DIRECT"],
+            "permission": "anyone",
+            "describe": "管理员设置或删除关键词回复, 普通用户提交关键词回复(需要审核)"
+        },
+        "isKeyword": {
+            "reg": ".*",
+            "fnc": "isKeyword",
+            "type": ["GUILD"],
+            "permission": "anyone",
+            "describe": "触发关键词回复"
+        }
     }
 }
