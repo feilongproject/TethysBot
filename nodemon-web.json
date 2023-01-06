@@ -3,7 +3,7 @@
     "execMap": {
         "ts": "tsc"
     },
-    "watch": ["src/"],
+    "watch": ["src/web/"],
     "exec": "ts-node src/web/index.ts --dev",
     "ext": "ts"
 }

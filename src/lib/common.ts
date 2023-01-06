@@ -4,7 +4,7 @@ export async function idToName(uid: string) {
 }
 
 export function sleep(ms: number): Promise<NodeJS.Timeout> {
-    return new Promise((resolve) => setTimeout(resolve, ms));
+    return new Promise((resolve) => setTimeout(() => resolve, ms));
 }
 
 export function timeConver(timestamp: number | string | Date) {

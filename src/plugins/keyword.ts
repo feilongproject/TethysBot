@@ -53,9 +53,11 @@ export async function setKeyword(msg: IMessageEx) {
 export async function isKeyword(msg: IMessageEx) {
 
     const accurate = await redis.hGetAll(`keyword:accurate:${msg.content}`);
+    if (devEnv) log.debug(accurate);
     if (accurate.content && accurate.status == "checked") return msg.sendMsgEx({ content: accurate.content });
 
     return redis.keys(`keyword:blurry:*${msg.content}*`).then(async keys => {
+        if (devEnv) log.debug(keys);
         for (const key of keys)
             if (await redis.hGetAll(key).then(blurry => {
                 if (blurry.status == "checked") return msg.sendMsgEx({ content: blurry.content });
