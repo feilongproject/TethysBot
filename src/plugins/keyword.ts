@@ -56,11 +56,14 @@ export async function isKeyword(msg: IMessageEx) {
     if (devEnv) log.debug(accurate);
     if (accurate.content && accurate.status == "checked") return msg.sendMsgEx({ content: accurate.content });
 
-    return redis.keys(`keyword:blurry:*${msg.content}*`).then(async keys => {
+    return redis.keys(`keyword:blurry:*`).then(async keys => {
         if (devEnv) log.debug(keys);
-        for (const key of keys)
-            if (await redis.hGetAll(key).then(blurry => {
+        for (const _key of keys) {
+            const keyword = _key.match(/^keyword:blurry:(.*)$/)![1];
+            if (msg.content.includes(keyword) && await redis.hGetAll(_key).then(blurry => {
+                if (devEnv) log.debug(keyword);
                 if (blurry.status == "checked") return msg.sendMsgEx({ content: blurry.content });
             })) return;
+        }
     });
 }
