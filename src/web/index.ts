@@ -31,14 +31,13 @@ const wssOn = (ws: WebSocket.WebSocket) => {
     const serverVers = [Number(serverExp[1]), Number(serverExp[2]), Number(serverExp[3])];
     const serverToken = config.wsToken;
 
-    if (webToken != serverToken) return ws.close(1002, "Token错误");
     const webLowVer = () => { return ws.close(1002, "请更新网页版本"); };
     const serverLowVer = () => { return ws.close(1002, "请更新服务器版本"); };
-
     if (webVers[0] < serverVers[0]) return webLowVer();
     if (webVers[0] > serverVers[0]) return serverLowVer();
     if (webVers[1] < serverVers[1]) return webLowVer();
     if (webVers[1] > serverVers[1]) return serverLowVer();
+    if (webToken != serverToken) return ws.close(1002, "Token错误");
 
     ws.on('message', (_data, isBinary) => {
 
