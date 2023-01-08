@@ -3,7 +3,7 @@ import { createClient } from "redis";
 import { createOpenAPI } from "qq-guild-bot";
 import _log from '../lib/logger';
 import config from '../../config/config.json';
-
+import { version as serverVersion } from "../../package.json";
 
 global.log = _log;
 global._path = process.cwd();
@@ -22,12 +22,29 @@ const wssOn = (ws: WebSocket.WebSocket) => {
         log.error(`连接被关闭: 关闭码${code},${reason}`);
     });
 
-    if (ws.protocol != config.wsToken) return ws.close(1002, "Token错误");
+    const { protocol } = ws;
+    const webExp = protocol.match(/^(\d+)\.(\d+)\.(\d+)\|(.*)$/) || ["0", "0", "0", ""];
+    const webVers = [Number(webExp[1]), Number(webExp[2]), Number(webExp[3])];
+    const webToken = webExp[4];
+
+    const serverExp = serverVersion.match(/^(\d+)\.(\d+)\.(\d+)$/) || ["0", "0", "0"];
+    const serverVers = [Number(serverExp[1]), Number(serverExp[2]), Number(serverExp[3])];
+    const serverToken = config.wsToken;
+
+    if (webToken != serverToken) return ws.close(1002, "Token错误");
+    const webLowVer = () => { return ws.close(1002, "请更新网页版本"); };
+    const serverLowVer = () => { return ws.close(1002, "请更新服务器版本"); };
+
+    if (webVers[0] < serverVers[0]) return webLowVer();
+    if (webVers[0] > serverVers[0]) return serverLowVer();
+    if (webVers[1] < serverVers[1]) return webLowVer();
+    if (webVers[1] > serverVers[1]) return serverLowVer();
+
     ws.on('message', (_data, isBinary) => {
 
         import("./plugins").then(async d => {
+            log.info(`接收到信息:`, _data);
             const sp = JSON.parse(_data.toString());
-            log.info(`接收到信息:`, sp);
             if (typeof d.wsIntentMessage[sp.key] == "function")
                 return ws.send(JSON.stringify({
                     key: sp.retKey ? sp.retKey : sp.key,
@@ -48,6 +65,7 @@ const wssOn = (ws: WebSocket.WebSocket) => {
     });
 
     ws.send(JSON.stringify({ key: "ok" }));
+    ws.send(JSON.stringify({ key: "version", data: { serverVersion } }));
 }
 
 redis.connect().then(() => {

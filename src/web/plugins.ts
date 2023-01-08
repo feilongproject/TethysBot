@@ -1,8 +1,11 @@
 import { loadGuildTree } from "../init";
 import { sendMsgEx } from "../lib/IMessageEx";
-
+import { version } from "../../package.json";
 
 export const wsIntentMessage: { [key: string]: (data?: any) => Promise<any> } = {
+    "version": async () => {
+        return { version };
+    },
     "channel.getList": async () => {
         const res = await loadGuildTree(false, false);
         return saveGuildsTree;
@@ -30,14 +33,33 @@ export const wsIntentMessage: { [key: string]: (data?: any) => Promise<any> } = 
             return Promise.all(keysInfo);
         });
     },
-    "keyword.passCheck": async (data) => {
+    "keyword.changeStatus": async (data) => {
         const key = `keyword:${data.type}:${data.keyword}`;
         return redis.exists(key).then(e => {
             if (!e) throw `not found key: ${data.type}:${data.keyword}`;
         }).then(() => {
-            return redis.hSet(key, "status", "checked");
+            return redis.hSet(key, "status", data.status == "checked" ? "checking" : "checked");
         }).then(() => {
             return redis.hGetAll(key);
+        }).then(keyData => {
+            return Object.assign(data, keyData);
+        });
+    },
+    "keyword.changeType": async (data) => {
+        const srcType = data.type;
+        const forType = srcType == "blurry" ? "accurate" : "blurry";
+        const srcKey = `keyword:${srcType}:${data.keyword}`;
+        const forKey = `keyword:${forType}:${data.keyword}`;
+        return redis.exists(srcKey).then(e => {
+            if (!e) throw `not found key: ${data.type}:${data.keyword}`;
+            return redis.exists(forKey);
+        }).then(e => {
+            if (e) throw `new key exists: ${data.type}:${data.keyword}`;
+            return redis.rename(srcKey, forKey);
+        }).then(() => {
+            return redis.hSet(forKey, "type", forType);
+        }).then(() => {
+            return redis.hGetAll(forKey);
         }).then(keyData => {
             return Object.assign(data, keyData);
         });
