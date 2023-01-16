@@ -83,7 +83,7 @@ export async function sendMsgEx(option: SendMsgOption, msg?: IMessageEx) {
                 `https://api.sgroup.qq.com/dms/${guildId}/messages` :
                 `https://api.sgroup.qq.com/channels/${channelId}/messages`;
         const formdata = new FormData();
-        formdata.append("msg_id", msgId);
+        if (msgId) formdata.append("msg_id", msgId);
         if (content) formdata.append("content", content);
         formdata.append("file_image", fs.createReadStream(imagePath));
         return fetch(pushUrl, {
