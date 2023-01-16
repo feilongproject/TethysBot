@@ -4,7 +4,7 @@ import { createClient } from "redis";
 import { createOpenAPI } from "qq-guild-bot";
 import _log from '../lib/logger';
 import config from '../../config/config.json';
-import { version as serverVersion } from "../../package.json";
+import { serverVersion } from "../../package.json";
 
 global.log = _log;
 global._path = process.cwd();

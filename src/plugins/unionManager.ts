@@ -131,11 +131,11 @@ export async function inviteJoinUnion(msg: IMessageEx) {
                     invited_member: `<@${inviteMember.id}>`,
                     status: "确认中",
                     invite_time: timeConver(msg.timestamp),
-                }, "102018808_1666629168").then(async (res) => {
-                    //log.debug(res);
+                }, "102018808_1666629168").then(async () => {
                     inviteUnionInfo.members.push({ uid: inviteMember.id, auth: "invited" });
-                    //await redis.hSet("inviteMember", inviteMember.id, "1");
-                    await redis.hSet(`union:${inviteUnionInfo.name}`, `member:${inviteMember.id}`, "invited");
+                    return redis.hSet(`union:${inviteUnionInfo.name}`, `member:${inviteMember.id}`, "invited");
+                }).then(() => {
+                    return redis.setEx(`ttl:inviteJoinUnion:${inviteMember.id}`, 60 * 60 * 1, new Date().getTime().toString());
                 });
             } else if (auth == "invited") {
                 await msg.sendMsgEx({ content: `${inviteMember.username} 正在被邀请` });
@@ -163,7 +163,9 @@ export async function processInviteJoinUnion(msg: IMessageEx) {
         await redis.hDel(`union:${inviteUnionInfo.name}`, `member:${msg.author.id}`);
         replayStr = `<@${msg.author.id}>已拒绝加入${inviteUnionInfo.name}公会`;
     }
-    return msg.sendMsgEx({ content: replayStr });
+    return redis.del(`ttl:inviteJoinUnion:${msg.author.id}`).then(() => {
+        return msg.sendMsgEx({ content: replayStr });
+    })
 }
 
 export async function removeUnionMember(msg: IMessageEx) {
@@ -172,7 +174,7 @@ export async function removeUnionMember(msg: IMessageEx) {
     const masterUnionInfo = await findMemberInUnions(unionInformationList, msg.author.id);
 
     if (!masterUnionInfo) return msg.sendMsgEx({ content: `您还没有公会，请先创建公会` });
-    else if (masterUnionInfo.auth != "master") return msg.sendMsgEx({ content: `您还不是${masterUnionInfo.name}公会会长，不可移除他人` });
+    if (masterUnionInfo.auth != "master") return msg.sendMsgEx({ content: `您还不是${masterUnionInfo.name}公会会长，不可移除他人` });
 
     for (const removeMember of msg.mentions) {
         if (removeMember.bot) continue;
@@ -180,6 +182,34 @@ export async function removeUnionMember(msg: IMessageEx) {
             return msg.sendMsgEx({ content: `已从${masterUnionInfo.name}公会移除成员${removeMember.username}` });
         });
     }
+}
+
+export async function moveUnionMaster(msg: IMessageEx) {
+    if (!msg.mentions) return msg.sendMsgEx({ content: `未指定转让用户` });
+    const unionInformationList = await getUnionInformationList();
+    const masterUnionInfo = await findMemberInUnions(unionInformationList, msg.author.id);
+    if (!masterUnionInfo) return msg.sendMsgEx({ content: `您还没有公会，无法转让` });
+    if (masterUnionInfo.auth != "master") return msg.sendMsgEx({ content: `您还不是${masterUnionInfo.name}公会会长，不可转让公会` });
+    for (const moveMember of msg.mentions) {
+        if (moveMember.bot) continue;
+        return redis.hDel(`union:${masterUnionInfo.name}`, `member:${msg.author.id}`).then(() => {
+            return redis.hSet(`union:${masterUnionInfo.name}`, [
+                ["master", moveMember.id],
+                [`member:${moveMember.id}`, "master"],
+            ]);
+        }).then(() => {
+            return msg.sendMsgEx({ content: `已转让${masterUnionInfo.name}公会会长给${moveMember.username}` });
+        });
+    }
+}
+
+export async function quitUnion(msg: IMessageEx) {
+    const unionInformationList = await getUnionInformationList();
+    const masterUnionInfo = await findMemberInUnions(unionInformationList, msg.author.id);
+    if (!masterUnionInfo) return msg.sendMsgEx({ content: `您还没有加入公会` });
+    return redis.hDel(`union:${masterUnionInfo.name}`, `member:${msg.author.id}`).then(() => {
+        return msg.sendMsgEx({ content: `${msg.author.username}已退出${masterUnionInfo.name}公会` });
+    });
 }
 
 function memberIsInUnion(uid: string, unionInfo: UnionListCell): boolean {
@@ -202,12 +232,17 @@ async function getUnionInformationMeta(unionKeyName: string): Promise<UnionListC
     const members: UnionListMember[] = [];
     const kv = await redis.hGetAll(unionKeyName);
     for (const key in kv) {
-        //log.debug(key);
         const reg = /^member:(\d+)$/.exec(key);
-        if (reg) members.push({
-            uid: reg[1],
-            auth: kv[key] as "master" | "member" | "invited",
-        });
+        if (!reg) continue;
+        if (kv[key] == "invited" && !await redis.exists(`ttl:inviteJoinUnion:${reg[1]}`)) {
+            await redis.hDel(unionKeyName, key);
+            continue;
+        } else {
+            members.push({
+                uid: reg[1],
+                auth: kv[key] as "master" | "member" | "invited",
+            });
+        }
     }
     return {
         name: unionKeyName.replace(/^union:/, ""),

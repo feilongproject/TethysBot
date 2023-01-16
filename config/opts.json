@@ -169,6 +169,20 @@
             "type": ["GUILD"],
             "permission": "anyone",
             "describe": "（会长）移除公会成员"
+        },
+        "moveUnionMaster": {
+            "reg": "^转让会长",
+            "fnc": "moveUnionMaster",
+            "type": ["GUILD"],
+            "permission": "anyone",
+            "describe": "（会长）转让公会给指定用户"
+        },
+        "quitUnion": {
+            "reg": "^退出公会$",
+            "fnc": "quitUnion",
+            "type": ["GUILD"],
+            "permission": "anyone",
+            "describe": "公会成员退出公会"
         }
     },
     "keyword": {
