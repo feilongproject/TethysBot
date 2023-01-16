@@ -1,6 +1,10 @@
+import fs from "fs";
 import { loadGuildTree } from "../init";
 import { sendMsgEx } from "../lib/IMessageEx";
 import { version } from "../../package.json";
+
+var imageInfo: null | { name: string; size: number; type: string; lastModified: number; } = null;
+const imageDataDir = `${_path}/imageData/`;
 
 export const wsIntentMessage: { [key: string]: (data?: any) => Promise<any> } = {
     "version": async () => {
@@ -15,6 +19,7 @@ export const wsIntentMessage: { [key: string]: (data?: any) => Promise<any> } = 
             sendType: "GUILD",
             channelId: data.channelId,
             content: data.content,
+            imagePath: data.imageName ? `${_path}/imageData/${data.imageName}` : undefined,
         }).then(res => {
             return res.data;
         });
@@ -86,4 +91,34 @@ export const wsIntentMessage: { [key: string]: (data?: any) => Promise<any> } = 
             return Object.assign({ isDel }, data);
         });
     },
+    "image.get": async (data) => {
+        //log.debug(data);
+        return fs.readFileSync(imageDataDir + data);
+    },
+    "image.getList": async () => {
+        const fileList = fs.readdirSync(imageDataDir);
+        const retList: string[] = [];
+        for (const fileName of fileList) {
+            if (fileName == "readme.txt") continue;
+            retList.push(fileName);
+        }
+        return retList;
+    },
+    "image.sendReady": async (data) => {
+        imageInfo = data;
+    },
+    "image.delete": async (data) => {
+        log.debug(data);
+        if (fs.existsSync(imageDataDir + data))
+            return fs.rmSync(imageDataDir + data);
+        else throw "file not found";
+    }
+}
+
+export function saveImage(data: Buffer) {
+    if (!imageInfo) throw "not get imageInfo";
+    const _imageInfo = imageInfo;
+    imageInfo = null;
+    fs.writeFileSync(imageDataDir + _imageInfo.name, data, { encoding: "binary" });
+    return _imageInfo;
 }

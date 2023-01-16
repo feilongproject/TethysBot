@@ -1,3 +1,4 @@
+import fs from "fs";
 import WebSocket from "ws";
 import { createClient } from "redis";
 import { createOpenAPI } from "qq-guild-bot";
@@ -39,21 +40,31 @@ const wssOn = (ws: WebSocket.WebSocket) => {
     if (webVers[1] > serverVers[1]) return serverLowVer();
     if (webToken != serverToken) return ws.close(1002, "Token错误");
 
-    ws.on('message', (_data, isBinary) => {
-
+    ws.on('message', (_data) => {
         import("./plugins").then(async d => {
+            if (Buffer.isBuffer(_data)) {
+                log.info("接收到文件");
+                return ws.send(JSON.stringify({
+                    key: "image.sendGone",
+                    data: d.saveImage(_data),
+                }));
+            }
+
             log.info(`接收到信息:`, _data);
             const sp = JSON.parse(_data.toString());
-            if (typeof d.wsIntentMessage[sp.key] == "function")
-                return ws.send(JSON.stringify({
+            if (typeof d.wsIntentMessage[sp.key] == "function") {
+                const data = await d.wsIntentMessage[sp.key](sp.data);
+                if (Buffer.isBuffer(data)) return ws.send(data as Buffer);
+                else return ws.send(JSON.stringify({
                     key: sp.retKey ? sp.retKey : sp.key,
-                    data: await d.wsIntentMessage[sp.key](sp.data),
+                    data: data,
                 }));
-            else throw `${sp.key} not a funtion`;
+            } else throw `${sp.key} not a funtion`;
         }).catch(err => {
+            log.error(err);
             ws.send(JSON.stringify({
                 key: "error",
-                data: String(err),
+                data: JSON.stringify(err),
             }));
         });
 
@@ -67,11 +78,18 @@ const wssOn = (ws: WebSocket.WebSocket) => {
     ws.send(JSON.stringify({ key: "version", data: { serverVersion } }));
 }
 
+const pluginFile = `${_path}/src/web/plugins.ts`;
+fs.watchFile(pluginFile, () => {
+    if (require.cache[pluginFile]) {
+        delete require.cache[pluginFile];
+        log.mark("plugins.ts已更新");
+    }
+});
+
 redis.connect().then(() => {
     log.info(`初始化：redis数据库连接成功`);
     wss.on('connection', wssOn);
     log.info(`网页后端已启动, 端口${PORT}`);
-
 }).catch(err => {
     log.error(`初始化：redis数据库连接失败，正在退出程序\n${err}`);
     process.exit();

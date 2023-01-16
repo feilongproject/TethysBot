@@ -16,25 +16,24 @@ export async function init() {
         log.mark("当前环境处于开发环境，请注意！");
     } else global.devEnv = false;
 
-    if (global.devEnv) {
-        log.info(`初始化：正在创建插件热加载监听`);
-        fs.watch(`${global._path}/src/plugins/`, (event, filename) => {
-            //log.debug(event, filename);
-            if (event != "change") return;
-            if (require.cache[`${global._path}/src/plugins/${filename}`]) {
-                log.mark(`文件${global._path}/src/plugins/${filename}已修改，正在执行热更新`);
-                delete require.cache[`${global._path}/src/plugins/${filename}`];
-            }
-        });
-        log.info(`初始化：正在创建指令文件热加载监听`);
-        const optFile = `${global._path}/config/opts.json`;
-        fs.watchFile(optFile, () => {
-            if (require.cache[optFile]) {
-                log.mark(`指令配置文件正在进行热更新`);
-                delete require.cache[optFile];
-            }
-        });
-    }
+    log.info(`初始化：正在创建插件热加载监听`);
+    fs.watch(`${global._path}/src/plugins/`, (event, filename) => {
+        //log.debug(event, filename);
+        if (event != "change") return;
+        if (require.cache[`${global._path}/src/plugins/${filename}`]) {
+            log.mark(`文件${global._path}/src/plugins/${filename}已修改，正在执行热更新`);
+            delete require.cache[`${global._path}/src/plugins/${filename}`];
+        }
+    });
+
+    log.info(`初始化：正在创建指令文件热加载监听`);
+    const optFile = `${global._path}/config/opts.json`;
+    fs.watchFile(optFile, () => {
+        if (require.cache[optFile]) {
+            log.mark(`指令配置文件正在进行热更新`);
+            delete require.cache[optFile];
+        }
+    });
 
     log.info(`初始化：正在连接数据库`);
     global.redis = createClient(config.redisConfig);
