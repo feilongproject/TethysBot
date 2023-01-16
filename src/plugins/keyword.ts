@@ -64,7 +64,7 @@ export async function isKeyword(msg: IMessageEx) {
     const accurate = await redis.hGetAll(`keyword:accurate:${msg.content}`);
     if (devEnv) log.debug(accurate);
     if (accurate.content && accurate.status == "checked") {
-        if (accurate.imageName == "NONE") return msg.sendMsgEx({ content: accurate.content });
+        if (!accurate.imageName || accurate.imageName == "NONE") return msg.sendMsgEx({ content: accurate.content });
         return msg.sendMsgEx({
             content: accurate.content,
             imagePath: `${_path}/imageData/${accurate.imageName}`
@@ -76,8 +76,14 @@ export async function isKeyword(msg: IMessageEx) {
         for (const _key of keys) {
             const keyword = _key.match(/^keyword:blurry:(.*)$/)![1];
             if (msg.content.includes(keyword) && await redis.hGetAll(_key).then(blurry => {
-                if (devEnv) log.debug(keyword);
-                if (blurry.status == "checked") return msg.sendMsgEx({ content: blurry.content });
+                if (devEnv) log.debug(keyword, blurry);
+                if (blurry.status == "checked") {
+                    if (!blurry.imageName || blurry.imageName == "NONE") return msg.sendMsgEx({ content: blurry.content });
+                    else return msg.sendMsgEx({
+                        content: blurry.content,
+                        imagePath: `${_path}/imageData/${blurry.imageName}`,
+                    });
+                }
             })) return;
         }
     });

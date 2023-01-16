@@ -81,6 +81,18 @@ export const wsIntentMessage: { [key: string]: (data?: any) => Promise<any> } = 
             return Object.assign(data, keyData);
         });
     },
+    "keyword.saveImage": async (data) => {
+        const key = `keyword:${data.type}:${data.keyword}`;
+        return redis.exists(key).then(e => {
+            if (!e) throw `not found key: ${data.type}:${data.keyword}`;
+        }).then(() => {
+            return redis.hSet(key, "imageName", data.imageName);
+        }).then(() => {
+            return redis.hGetAll(key);
+        }).then(keyData => {
+            return Object.assign(data, keyData);
+        });
+    },
     "keyword.delete": async (data) => {
         const key = `keyword:${data.type}:${data.keyword}`;
         return redis.exists(key).then(e => {
