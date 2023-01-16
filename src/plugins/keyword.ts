@@ -1,5 +1,7 @@
-import { IMessageEx } from "../lib/IMessageEx";
+import fs from "fs";
+import fetch from "node-fetch";
 import { isAdmin } from "./admin";
+import { IMessageEx } from "../lib/IMessageEx";
 
 /* 
 TODO: 关键词冲突解决
@@ -29,7 +31,13 @@ export async function setKeyword(msg: IMessageEx) {
     //const refMsg = msg.messageType == "GUILD" ? (await client.messageApi.message(msg.channel_id, refMsgId)).data.message.content : await redis.get(`directMsg:${refMsgId}`);
     const refMsg = (await client.messageApi.message(msg.channel_id, refMsgId)).data.message;
     if (!refMsg) return msg.sendMsgEx({ content: "未找到引用消息" });
-    //log.debug(keyword, refMsg);
+    const imageName = refMsg.attachments ? await fetch("https://" + refMsg.attachments[0].url).then(async res => {
+        const buff = await res.buffer();
+        const _name = `autoDownload-${(refMsg.attachments[0] as any).filename}`;
+        fs.writeFileSync(`${_path}/imageData/${_name}`, buff);
+        return _name;
+    }) : "NONE";
+
     return redis.hSet(`keyword:${type}:${keyword}`, [
         ["content", refMsg.content],
         ["status", status],
@@ -37,13 +45,14 @@ export async function setKeyword(msg: IMessageEx) {
         ["ownerName", msg.author.username],
         ["refOwnerId", refMsg.author.id],
         ["refOwnerName", refMsg.author.username],
+        ["imageName", imageName],
     ]).then(() => {
         return msg.sendMsgEx({
             content: [
                 `已${status == "checked" ? "设置" : "提交"}关键词回复`,
                 `类型: ${type == "accurate" ? "精确" : "模糊"}`,
                 `关键词: ${keyword}`,
-                `回复内容: ${refMsg.content}`,
+                `回复内容${imageName == "NONE" ? "" : "(带图)"}: ${refMsg.content}`,
             ].join("\n"),
         });
     });
@@ -54,7 +63,13 @@ export async function isKeyword(msg: IMessageEx) {
 
     const accurate = await redis.hGetAll(`keyword:accurate:${msg.content}`);
     if (devEnv) log.debug(accurate);
-    if (accurate.content && accurate.status == "checked") return msg.sendMsgEx({ content: accurate.content });
+    if (accurate.content && accurate.status == "checked") {
+        if (accurate.imageName == "NONE") return msg.sendMsgEx({ content: accurate.content });
+        return msg.sendMsgEx({
+            content: accurate.content,
+            imagePath: `${_path}/imageData/${accurate.imageName}`
+        });
+    }
 
     return redis.keys(`keyword:blurry:*`).then(async keys => {
         if (devEnv) log.debug(keys);

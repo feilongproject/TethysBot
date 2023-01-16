@@ -1,23 +1,24 @@
 import fs from "fs";
 import fetch from 'node-fetch';
 import FormData from 'form-data';
-import { Embed, IMember, IMessage, IUser, MessageToCreate } from "qq-guild-bot";
+import { Embed, IMember, IMessage, IUser, MessageAttachment, MessageReference, MessageToCreate } from "qq-guild-bot";
 import config from '../../config/config.json';
 
 
 export class IMessageEx {
-    author: IUser;
-    channel_id: string;
-    content: string;
-    guild_id: string;
     id: string;
-    member?: IMember;
-    message_reference?: { message_id: string };
+    channel_id: string;
+    guild_id: string;
+    content: string;
+    timestamp: string;
+    author: IUser;
+    member: IMember;
+    attachments?: MessageAttachment[];
     seq?: number;
     seq_in_channel?: string;
-    timestamp: string;
     src_guild_id?: string;
     mentions?: IUser[];
+    message_reference?: MessageReference;;
 
     guildName?: string;
     channelName?: string;
@@ -25,18 +26,19 @@ export class IMessageEx {
 
     constructor(msg: IMessage & MessageToCreate & IMessageDIRECT, messageType: "DIRECT" | "GUILD") {
         //log.debug(msg);
-        this.author = msg.author;
-        this.channel_id = msg.channel_id;
-        this.content = msg.content || "";
-        this.guild_id = msg.guild_id;
         this.id = msg.id;
+        this.channel_id = msg.channel_id;
+        this.guild_id = msg.guild_id;
+        this.content = msg.content || "";
+        this.timestamp = msg.timestamp;
+        this.author = msg.author;
         this.member = msg.member;
-        this.message_reference = msg.message_reference;
+        this.attachments = msg.attachments;
         this.seq = msg.seq;
         this.seq_in_channel = msg.seq_in_channel;
-        this.timestamp = msg.timestamp;
         this.src_guild_id = msg.src_guild_id;
         this.mentions = msg.mentions;
+        this.message_reference = msg.message_reference;
 
         this.messageType = messageType;
 

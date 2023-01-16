@@ -69,6 +69,25 @@ init().then(() => {
     console.error(err);
 });
 
+async function wsIntentMessage(data: IntentMessage) {
+    try {
+        var msg: IMessageEx | null = null;
+        if (!data.msg || !data.msg.author) return;
+        if (!devAdmin(data.msg.author.id)) return;//开发环境专用
+
+        if (data.eventType == "MESSAGE_CREATE") {
+            msg = new IMessageEx(data.msg, "GUILD");
+            msg.content = msg.content.replace(new RegExp(`<@!${meId}>`), ``).trim().replace(/^\//, "");
+        } else if (data.eventType == "DIRECT_MESSAGE_CREATE") {
+            msg = new IMessageEx(data.msg, "DIRECT");
+            //if (msg.content) await redis.setEx(`directMsg:${msg.id}`, 60 * 60 * 1, msg.content);
+        }
+        if (msg) return execute(msg);
+    } catch (err) {
+        log.error(err);
+    }
+}
+
 async function execute(msg: IMessageEx) {
     try {
         await redis.set("lastestMsgId", msg.id, { EX: 4 * 60 });
@@ -87,25 +106,5 @@ async function execute(msg: IMessageEx) {
         log.error(err);
     }
 }
-
-async function wsIntentMessage(data: IntentMessage) {
-    try {
-        var msg: IMessageEx | null = null;
-        if (!data.msg || !data.msg.author) return;
-        if (!devAdmin(data.msg.author.id)) return;//开发环境专用
-
-        if (data.eventType == "MESSAGE_CREATE") {
-            msg = new IMessageEx(data.msg, "GUILD");
-            msg.content = msg.content.replace(new RegExp(`<@!${meId}>`), ``).trim().replace(/^\//, "");
-        } else if (data.eventType == "DIRECT_MESSAGE_CREATE") {
-            msg = new IMessageEx(data.msg, "DIRECT");
-        }
-        if (msg) return execute(msg);
-    } catch (err) {
-        log.error(err);
-    }
-
-}
-
 
 type PluginFnc = (msg: IMessageEx) => Promise<any>
